@@ -46,8 +46,15 @@ module.exports = wrap(async (req, res) => {
 
   try {
     const products = await loadCatalog(country);
+    console.info('[get-catalog] loaded', { country: requested, bitrefillCountry: country, count: products.length });
     return res.status(200).json({ country: requested, products });
   } catch (err) {
+    console.error('[get-catalog] Bitrefill catalog request failed', {
+      country: requested,
+      bitrefillCountry: country,
+      status: Number.isFinite(err && err.status) ? err.status : null,
+      message: String((err && err.message) || 'unknown_error').slice(0, 240),
+    });
     const stale = cache.get(country);
     if (stale) return res.status(200).json({ country: requested, products: stale.products, stale: true });
     return res.status(502).json({ error: 'catalog_unavailable' });
