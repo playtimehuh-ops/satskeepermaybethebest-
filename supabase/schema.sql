@@ -262,9 +262,11 @@ begin
   select * into d from devices where device_id = l.device_id for update;
 
   if coalesce(p_valid, false) and found and not d.frozen then
-    v_points := round(l.mb_shared * p_points_per_mb, 4);
+    -- p_points_per_mb is 12 base points multiplied by the 80% user share (9.6).
+    -- floor() ensures the retained 20% is never rounded back to the user.
+    v_points := floor(l.mb_shared * p_points_per_mb);
     update bandwidth_logs
-       set status = 'awarded', verified_by_ai = true, points_awarded = v_points,
+       set status = 'awarded', verified_by_ai = false, points_awarded = v_points,
            vests_at = now() + make_interval(hours => p_vest_hours), settled_at = now()
      where id = l.id;
     update devices
