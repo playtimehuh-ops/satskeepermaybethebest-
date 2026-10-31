@@ -99,6 +99,11 @@ module.exports = wrap(async (req, res) => {
   try {
     product = normalizeProduct(unwrap(await bitrefill('/products/' + encodeURIComponent(product_id))));
   } catch (err) {
+    console.error('[redeem] product lookup failed', {
+      productId: product_id,
+      status: Number.isFinite(err && err.status) ? err.status : null,
+      message: String((err && err.message) || 'unknown_error').slice(0, 240),
+    });
     return res.status(err.http && err.status === 404 ? 404 : 502).json({ error: 'catalog_unavailable' });
   }
   if (!product) return res.status(409).json({ error: 'product_unavailable' });
@@ -119,6 +124,13 @@ module.exports = wrap(async (req, res) => {
       timeoutMs: 25000,
     }));
   } catch (err) {
+    console.error('[redeem] Bitrefill invoice creation failed', {
+      productId: product.id,
+      productCountry: product.country,
+      status: Number.isFinite(err && err.status) ? err.status : null,
+      providerCode: String((err && err.providerCode) || '').slice(0, 100),
+      message: String((err && err.message) || 'unknown_error').slice(0, 240),
+    });
     return res.status(502).json({ error: 'invoice_unavailable' });
   }
 
