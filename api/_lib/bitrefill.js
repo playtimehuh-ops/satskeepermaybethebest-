@@ -40,10 +40,11 @@ async function bitrefill(pathOrUrl, opts) {
       json = null;
     }
     if (!resp.ok) {
-      const detail = json && (json.message || json.error);
+      const detail = json && (json.message || json.error || json.detail);
       const err = new Error(detail ? String(detail) : 'bitrefill_http_' + resp.status);
       err.status = resp.status;
       err.http = true;
+      err.providerCode = json && (json.code || json.error_code) ? String(json.code || json.error_code) : null;
       throw err;
     }
     return json;
