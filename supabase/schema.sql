@@ -34,6 +34,7 @@ create table if not exists redemptions (
 alter table devices add column if not exists frozen boolean not null default false;
 alter table devices add column if not exists frozen_reason text;
 alter table devices add column if not exists lifetime_mb numeric not null default 0;
+alter table devices add column if not exists fractional_points numeric not null default 0;
 alter table devices add column if not exists created_at timestamptz not null default now();
 
 alter table bandwidth_logs add column if not exists report_id text;
@@ -56,6 +57,10 @@ begin
   if not exists (select 1 from pg_constraint where conname = 'devices_values_ok') then
     alter table devices add constraint devices_values_ok
       check (points_balance >= 0 and streak >= 0 and lifetime_mb >= 0);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'devices_fractional_points_ok') then
+    alter table devices add constraint devices_fractional_points_ok
+      check (fractional_points >= 0 and fractional_points < 1);
   end if;
   if not exists (select 1 from pg_constraint where conname = 'bandwidth_logs_values_ok') then
     alter table bandwidth_logs add constraint bandwidth_logs_values_ok
@@ -245,6 +250,7 @@ declare
   l bandwidth_logs%rowtype;
   d devices%rowtype;
   v_points numeric;
+  v_fraction numeric;
 begin
   if p_points_per_mb is null or p_points_per_mb < 0 or p_points_per_mb > 10
      or p_vest_hours is null or p_vest_hours < 0 or p_vest_hours > 720 then
@@ -262,15 +268,18 @@ begin
   select * into d from devices where device_id = l.device_id for update;
 
   if coalesce(p_valid, false) and found and not d.frozen then
-    -- p_points_per_mb is 12 base points multiplied by the 80% user share (9.6).
-    -- floor() ensures the retained 20% is never rounded back to the user.
-    v_points := floor(l.mb_shared * p_points_per_mb);
+    -- Award whole points while carrying the fractional remainder to the next report.
+    -- The user receives 80% of the 12-point base rate: 9.6 points per MB.
+    v_fraction := coalesce(d.fractional_points, 0) + (l.mb_shared * p_points_per_mb);
+    v_points := floor(v_fraction);
+    v_fraction := v_fraction - v_points;
     update bandwidth_logs
        set status = 'awarded', verified_by_ai = false, points_awarded = v_points,
            vests_at = now() + make_interval(hours => p_vest_hours), settled_at = now()
      where id = l.id;
     update devices
        set points_balance = points_balance + v_points,
+           fractional_points = v_fraction,
            lifetime_mb = lifetime_mb + l.mb_shared
      where device_id = l.device_id;
     return jsonb_build_object('status', 'awarded', 'points_awarded', v_points);
