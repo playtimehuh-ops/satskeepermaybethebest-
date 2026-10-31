@@ -7,7 +7,6 @@ module.exports = {
   payout_pct: 0.2,
   total_points_per_mb: 12,
   user_share: 0.8,
-  points_per_mb: 9.6,
   threshold_points: 10000,
   points_per_usd: 10000,
 
