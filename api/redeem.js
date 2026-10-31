@@ -27,7 +27,7 @@ module.exports = wrap(async (req, res) => {
     return res.status(400).json({ error: 'bad_request' });
   }
 
-  // Validate against the live catalog BEFORE spending any points.
+  // Validate the selection against Bitrefill before creating an invoice.
   let product;
   try {
     product = normalizeProduct(unwrap(await bitrefill('/products/' + encodeURIComponent(product_id))));
@@ -39,10 +39,40 @@ module.exports = wrap(async (req, res) => {
   const selection = resolveSelection(product, pkg, body.value);
   if (!selection) return res.status(400).json({ error: 'invalid_selection' });
 
-  // 1. Spend points and create the redemption row in ONE database transaction.
+  // Create an unpaid invoice first so points are charged against its actual USD price.
+  const line = { product_id: product.id, quantity: 1 };
+  if (selection.package_id) line.package_id = selection.package_id;
+  else line.value = selection.value;
+
+  let invoice;
+  try {
+    invoice = unwrap(await bitrefill('/invoices', {
+      method: 'POST',
+      body: { products: [line], payment_method: 'balance', auto_pay: false },
+      timeoutMs: 25000,
+    }));
+  } catch (err) {
+    return res.status(502).json({ error: 'invoice_unavailable' });
+  }
+
+  const invoiceId = invoice && invoice.id ? String(invoice.id) : null;
+  const payment = invoice && invoice.payment;
+  const currency = String((payment && payment.currency) || '').toUpperCase();
+  const usdPrice = Number(payment && payment.price);
+  if (!invoiceId || currency !== 'USD' || !Number.isFinite(usdPrice) || usdPrice <= 0) {
+    // Do not spend points if Bitrefill did not provide a trustworthy USD amount.
+    return res.status(502).json({ error: 'unsupported_invoice_pricing' });
+  }
+
+  const pointsRequired = config.pointsForUsd(usdPrice);
+  if (!Number.isSafeInteger(pointsRequired) || pointsRequired <= 0) {
+    return res.status(502).json({ error: 'invalid_invoice_pricing' });
+  }
+
+  // Reserve the exact invoice cost atomically, at 10,000 points per USD.
   const { data: reserved, error: reserveErr } = await supabase.rpc('reserve_redemption', {
     p_device_id: device_id,
-    p_points: config.threshold_points,
+    p_points: pointsRequired,
     p_product_id: product.id,
     p_user_limit: config.max_redemptions_per_user_day,
     p_global_limit: config.max_redemptions_global_day,
@@ -52,7 +82,11 @@ module.exports = wrap(async (req, res) => {
     case 'ok':
       break;
     case 'insufficient_points':
-      return res.status(402).json({ error: 'insufficient_points', available: Number(reserved.available || 0) });
+      return res.status(402).json({
+        error: 'insufficient_points',
+        available: Number(reserved.available || 0),
+        required: pointsRequired,
+      });
     case 'frozen':
       return res.status(403).json({ error: 'account_frozen' });
     case 'limit_user':
@@ -64,42 +98,15 @@ module.exports = wrap(async (req, res) => {
   }
   const redemptionId = reserved.id;
 
-  // 2. Create the invoice without auto-paying; Bitrefill balance pays the actual invoice.
-  const line = { product_id: product.id, quantity: 1 };
-  if (selection.package_id) line.package_id = selection.package_id;
-  else line.value = selection.value;
-
-  let invoice;
-  try {
-    invoice = unwrap(
-      await bitrefill('/invoices', {
-        method: 'POST',
-        body: { products: [line], payment_method: 'balance', auto_pay: false },
-        timeoutMs: 25000,
-      })
-    );
-  } catch (err) {
-    if (err.http && err.status >= 400 && err.status < 500) {
-      await refund(redemptionId, 'invoice_rejected');
-      return res.status(502).json({ error: 'payout_failed', refunded: true });
-    }
-    // Network failure or 5xx: the invoice may exist. Keep points spent, flag for review.
-    await advance(redemptionId, 'processing');
-    return res.status(502).json({ error: 'payout_unknown', redemption_id: redemptionId });
-  }
-
-  const invoiceId = invoice.id ? String(invoice.id) : null;
-  if (!invoiceId) {
-    await refund(redemptionId, 'no_invoice_id');
-    return res.status(502).json({ error: 'payout_failed', refunded: true });
-  }
   await advance(redemptionId, 'processing', { invoiceId });
 
+  // Pay only after points have been reserved successfully.
   if (invoice.status !== 'complete' && !FAILED.has(invoice.status)) {
     try {
-      const paid = unwrap(
-        await bitrefill('/invoices/' + encodeURIComponent(invoiceId) + '/pay', { method: 'POST', timeoutMs: 25000 })
-      );
+      const paid = unwrap(await bitrefill(
+        '/invoices/' + encodeURIComponent(invoiceId) + '/pay',
+        { method: 'POST', timeoutMs: 25000 }
+      ));
       if (paid && paid.status) invoice = paid;
     } catch (err) {
       if (err.http && err.status >= 400 && err.status < 500) {
@@ -110,7 +117,7 @@ module.exports = wrap(async (req, res) => {
     }
   }
 
-  // 3. Wait for delivery, then store and return the code.
+  // Wait for delivery, then store and return the code.
   const deadline = Date.now() + POLL_BUDGET_MS;
   try {
     while (invoice.status !== 'complete' && !FAILED.has(invoice.status) && Date.now() < deadline) {
@@ -118,7 +125,7 @@ module.exports = wrap(async (req, res) => {
       invoice = unwrap(await bitrefill('/invoices/' + encodeURIComponent(invoiceId)));
     }
   } catch (_) {
-    // fall through: reported as processing below
+    // Report as processing; the reconciliation job can check the invoice later.
   }
 
   if (FAILED.has(invoice.status)) {
@@ -132,5 +139,10 @@ module.exports = wrap(async (req, res) => {
     return res.status(200).json({ ok: true, status: 'completed', code, redemption_id: redemptionId });
   }
 
-  return res.status(202).json({ ok: true, status: 'processing', redemption_id: redemptionId, invoice_id: invoiceId });
+  return res.status(202).json({
+    ok: true,
+    status: 'processing',
+    redemption_id: redemptionId,
+    invoice_id: invoiceId,
+  });
 });
