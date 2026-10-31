@@ -7,16 +7,6 @@ const { FAILED, sleep, unwrap, findCode, refund, advance } = require('./_lib/pay
 
 const POLL_BUDGET_MS = 40000;
 
-// Returns true if the invoice price is known to exceed our hard ceiling.
-function overPriceCeiling(invoice) {
-  const pay = invoice && invoice.payment;
-  if (!pay) return false;
-  const currency = String(pay.currency || '').toUpperCase();
-  const price = Number(pay.price);
-  if (currency === 'USD' && Number.isFinite(price)) return price > config.max_invoice_usd;
-  return false;
-}
-
 module.exports = wrap(async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'method_not_allowed' });
@@ -74,7 +64,7 @@ module.exports = wrap(async (req, res) => {
   }
   const redemptionId = reserved.id;
 
-  // 2. Create the invoice WITHOUT paying, check the price, then pay.
+  // 2. Create the invoice without auto-paying; Bitrefill balance pays the actual invoice.
   const line = { product_id: product.id, quantity: 1 };
   if (selection.package_id) line.package_id = selection.package_id;
   else line.value = selection.value;
@@ -104,11 +94,6 @@ module.exports = wrap(async (req, res) => {
     return res.status(502).json({ error: 'payout_failed', refunded: true });
   }
   await advance(redemptionId, 'processing', { invoiceId });
-
-  if (overPriceCeiling(invoice)) {
-    await refund(redemptionId, 'price_over_ceiling');
-    return res.status(502).json({ error: 'payout_failed', refunded: true });
-  }
 
   if (invoice.status !== 'complete' && !FAILED.has(invoice.status)) {
     try {
