@@ -63,11 +63,12 @@ module.exports = wrap(async (req, res) => {
   }
 
   // The database has accepted the report under all deterministic limits.
-  // Settle it directly without calling an external AI auditor.
+  // Total = MB * 12; user share = floor(total * 0.8). SQL applies floor()
+  // atomically when it updates bandwidth_logs.points_awarded and devices.points_balance.
   const { data: settled, error: settleErr } = await supabase.rpc('settle_report', {
     p_log_id: begun.log_id,
     p_valid: true,
-    p_points_per_mb: config.points_per_mb,
+    p_points_per_mb: config.total_points_per_mb * config.user_share,
     p_vest_hours: config.vest_hours,
   });
   if (settleErr || !settled) return res.status(500).json({ error: 'db_error' });
