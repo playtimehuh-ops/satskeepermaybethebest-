@@ -1,0 +1,129 @@
+const config = require('./config');
+
+const COUNTRY_MAP = { US: 'US', UK: 'GB', GB: 'GB', EG: 'EG', SA: 'SA' };
+
+function resolveUrl(pathOrUrl) {
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  if (pathOrUrl.startsWith('/v2/')) return new URL(config.bitrefill_base).origin + pathOrUrl;
+  return config.bitrefill_base + pathOrUrl;
+}
+
+async function bitrefill(pathOrUrl, opts) {
+  const options = opts || {};
+  const key = process.env.BITREFILL_API_KEY;
+  if (!key) {
+    const err = new Error('bitrefill_not_configured');
+    err.status = 500;
+    throw err;
+  }
+  const url = resolveUrl(pathOrUrl);
+  if (!url.startsWith(config.bitrefill_base)) {
+    throw new Error('bad_bitrefill_url');
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs || 20000);
+  try {
+    const resp = await fetch(url, {
+      method: options.method || 'GET',
+      headers: {
+        Authorization: 'Bearer ' + key,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+    let json = null;
+    try {
+      json = await resp.json();
+    } catch (_) {
+      json = null;
+    }
+    if (!resp.ok) {
+      const detail = json && (json.message || json.error);
+      const err = new Error(detail ? String(detail) : 'bitrefill_http_' + resp.status);
+      err.status = resp.status;
+      err.http = true;
+      throw err;
+    }
+    return json;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function toNumber(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizePackage(p) {
+  if (p === null || p === undefined) return null;
+  let id = null;
+  let raw = p;
+  if (typeof p === 'object') {
+    id = p.id || p.package_id || null;
+    raw = p.value !== undefined ? p.value : p.amount;
+  }
+  let value = toNumber(raw);
+  if (value === null && typeof id === 'string' && id.includes('<&>')) {
+    value = toNumber(id.split('<&>')[1]);
+  }
+  if (value === null || value <= 0) return null;
+  return { package_id: id ? String(id) : null, value };
+}
+
+// Returns a trimmed product limited to what a redemption may actually buy.
+function normalizeProduct(p) {
+  if (!p || !p.id || p.in_stock === false) return null;
+  const cap = config.maxCardValue(p.currency);
+
+  const packages = (Array.isArray(p.packages) ? p.packages : [])
+    .map(normalizePackage)
+    .filter((x) => x && x.value <= cap);
+
+  let range = null;
+  if (p.range && typeof p.range === 'object') {
+    const min = toNumber(p.range.min);
+    const rawMax = toNumber(p.range.max);
+    const step = toNumber(p.range.step) || 1;
+    if (min !== null && rawMax !== null) {
+      const max = Math.min(rawMax, cap);
+      if (min <= max) range = { min, max, step };
+    }
+  }
+
+  if (packages.length === 0 && !range) return null;
+  return {
+    id: String(p.id),
+    name: String(p.name || p.id),
+    image: p.image || p.logo || p.icon || null,
+    country: p.country || null,
+    currency: p.currency || null,
+    packages,
+    range,
+  };
+}
+
+// Validates the client's choice against the real product. Returns
+// { package_id?, value } or null.
+function resolveSelection(product, packageId, value) {
+  if (packageId) {
+    const pkg = product.packages.find((p) => p.package_id === packageId);
+    return pkg ? { package_id: pkg.package_id, value: pkg.value } : null;
+  }
+  const v = Number(value);
+  if (!Number.isFinite(v) || v <= 0) return null;
+  if (product.range) {
+    const { min, max, step } = product.range;
+    if (v < min || v > max) return null;
+    const steps = (v - min) / step;
+    if (Math.abs(steps - Math.round(steps)) > 1e-6) return null;
+    return { value: v };
+  }
+  const byValue = product.packages.find((p) => p.value === v);
+  return byValue ? { package_id: byValue.package_id, value: byValue.value } : null;
+}
+
+module.exports = { COUNTRY_MAP, bitrefill, normalizeProduct, resolveSelection };
