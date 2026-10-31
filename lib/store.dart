@@ -569,7 +569,7 @@ class _ProductSheetState extends State<ProductSheet> {
             const SizedBox(height: 10),
             Text(
               'Your points are spent and the order is paid, but the code hasn\'t arrived yet. '
-              'You'll find it under Your gift cards in Account once it arrives. Reference #${_reference ?? 'unknown'}.',
+              'You\'ll find it under Your gift cards in Account once it arrives. Reference #${_reference ?? 'unknown'}.',
               style: T.body(c).copyWith(color: c.muted),
             ),
             const SizedBox(height: 24),
