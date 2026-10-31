@@ -6,6 +6,73 @@ const { bitrefill, normalizeProduct, resolveSelection } = require('./_lib/bitref
 const { FAILED, sleep, unwrap, findCode, refund, advance } = require('./_lib/payout');
 
 const POLL_BUDGET_MS = 40000;
+const FX_URL = 'https://open.er-api.com/v6/latest/USD';
+const FX_TIMEOUT_MS = 8000;
+const FX_MAX_CACHE_MS = 24 * 60 * 60 * 1000;
+
+// Reuse the provider's daily rate table across warm serverless invocations.
+let fxCache = null;
+let fxRequest = null;
+
+async function getUsdRates() {
+  if (fxCache && Date.now() < fxCache.expiresAt) return fxCache.rates;
+  if (fxRequest) return fxRequest;
+
+  fxRequest = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FX_TIMEOUT_MS);
+    try {
+      const response = await fetch(FX_URL, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error('fx_http_' + response.status);
+
+      const data = await response.json();
+      if (!data || data.result !== 'success' || data.base_code !== 'USD' ||
+          !data.rates || typeof data.rates !== 'object') {
+        throw new Error('fx_invalid_response');
+      }
+
+      const nextUpdate = Number(data.time_next_update_unix) * 1000;
+      const fallbackExpiry = Date.now() + 60 * 60 * 1000;
+      const expiresAt = Number.isFinite(nextUpdate) && nextUpdate > Date.now()
+        ? Math.min(nextUpdate, Date.now() + FX_MAX_CACHE_MS)
+        : fallbackExpiry;
+
+      fxCache = { rates: data.rates, expiresAt };
+      return data.rates;
+    } finally {
+      clearTimeout(timer);
+      fxRequest = null;
+    }
+  })();
+
+  return fxRequest;
+}
+
+async function invoiceUsdPrice(payment) {
+  const currency = String((payment && payment.currency) || '').trim().toUpperCase();
+  const localPrice = Number(payment && payment.price);
+  if (!/^[A-Z]{3}$/.test(currency) || !Number.isFinite(localPrice) || localPrice <= 0) {
+    throw new Error('invalid_invoice_pricing');
+  }
+  if (currency === 'USD') return localPrice;
+
+  const rates = await getUsdRates();
+  const localPerUsd = Number(rates[currency]);
+  if (!Number.isFinite(localPerUsd) || localPerUsd <= 0) {
+    throw new Error('unsupported_invoice_currency');
+  }
+
+  // Rates are quoted as local-currency units per 1 USD.
+  const usdPrice = localPrice / localPerUsd;
+  if (!Number.isFinite(usdPrice) || usdPrice <= 0) {
+    throw new Error('invalid_converted_invoice_price');
+  }
+  return usdPrice;
+}
 
 module.exports = wrap(async (req, res) => {
   if (req.method !== 'POST') {
@@ -39,7 +106,7 @@ module.exports = wrap(async (req, res) => {
   const selection = resolveSelection(product, pkg, body.value);
   if (!selection) return res.status(400).json({ error: 'invalid_selection' });
 
-  // Create an unpaid invoice first so points are charged against its actual USD price.
+  // Create an unpaid invoice first; its payment currency and price are authoritative.
   const line = { product_id: product.id, quantity: 1 };
   if (selection.package_id) line.package_id = selection.package_id;
   else line.value = selection.value;
@@ -56,12 +123,20 @@ module.exports = wrap(async (req, res) => {
   }
 
   const invoiceId = invoice && invoice.id ? String(invoice.id) : null;
-  const payment = invoice && invoice.payment;
-  const currency = String((payment && payment.currency) || '').toUpperCase();
-  const usdPrice = Number(payment && payment.price);
-  if (!invoiceId || currency !== 'USD' || !Number.isFinite(usdPrice) || usdPrice <= 0) {
-    // Do not spend points if Bitrefill did not provide a trustworthy USD amount.
-    return res.status(502).json({ error: 'unsupported_invoice_pricing' });
+  if (!invoiceId) {
+    return res.status(502).json({ error: 'invalid_invoice' });
+  }
+
+  let usdPrice;
+  try {
+    usdPrice = await invoiceUsdPrice(invoice.payment);
+  } catch (err) {
+    // The invoice is still unpaid and no points have been reserved.
+    const unavailable = err.message === 'unsupported_invoice_currency' ||
+      err.message === 'invalid_invoice_pricing';
+    return res.status(unavailable ? 502 : 503).json({
+      error: unavailable ? err.message : 'exchange_rates_unavailable',
+    });
   }
 
   const pointsRequired = config.pointsForUsd(usdPrice);
@@ -69,7 +144,7 @@ module.exports = wrap(async (req, res) => {
     return res.status(502).json({ error: 'invalid_invoice_pricing' });
   }
 
-  // Reserve the exact invoice cost atomically, at 10,000 points per USD.
+  // reserve_redemption locks the device row and reserves the exact converted cost atomically.
   const { data: reserved, error: reserveErr } = await supabase.rpc('reserve_redemption', {
     p_device_id: device_id,
     p_points: pointsRequired,
