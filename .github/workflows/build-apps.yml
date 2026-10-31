@@ -62,7 +62,7 @@ jobs:
       - name: Fetch the Bricolage Grotesque variable font
         run: |
           mkdir -p assets/fonts
-          curl -fsSL -o assets/fonts/Bricolage.ttf "https://github.com/google/fonts/raw/main/ofl/bricolagegrotesque/BricolageGrotesque%5Bopsz%2Cwdth%2Cwght%5D.ttf" \\
+          curl -fsSL -o assets/fonts/Bricolage.ttf "https://github.com/google/fonts/raw/main/ofl/bricolagegrotesque/BricolageGrotesque%5Bopsz%2Cwdth%2Cwght%5D.ttf" \
             || { echo "Font download failed; falling back to a system font"; cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf assets/fonts/Bricolage.ttf; }
 
       - name: Get Dart dependencies
