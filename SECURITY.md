@@ -18,7 +18,7 @@
 ## Do this before real users
 1. Supabase > Authentication: keep **Confirm email** ON, enable CAPTCHA and rate limits, set a minimum password length of 10.
 2. Vercel > Firewall: add a rate-limit rule on `/api/*` (for example 60 requests per minute per IP).
-3. Set `ADMIN_USER`, `ADMIN_PASS` (20+ chars) and `CRON_SECRET` (16+ random characters) in Vercel.
+3. Set `ADMIN_USER`, `ADMIN_PASS` (20+ chars) and `CRON_SECRET` (16+ chars) in Vercel.
 4. Make a release key and add four GitHub secrets, so every build is signed with the same key:
    `keytool -genkeypair -v -keystore release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias satskeeper`
    - Windows PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("release.jks")) | Set-Clipboard`
