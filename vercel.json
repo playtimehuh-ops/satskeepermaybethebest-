@@ -1,0 +1,22 @@
+{
+  "functions": {
+    "api/redeem.js": { "maxDuration": 60 },
+    "api/verify-bandwidth.js": { "maxDuration": 30 },
+    "api/admin.js": { "maxDuration": 60 }
+  },
+  "crons": [{ "path": "/api/admin?action=reconcile", "schedule": "0 6 * * *" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; frame-ancestors 'none'" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    }
+  ]
+}
