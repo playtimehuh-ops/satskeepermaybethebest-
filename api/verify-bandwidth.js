@@ -3,9 +3,9 @@ const { requireSession } = require('./_lib/auth');
 const { wrap, bodyOf } = require('./_lib/http');
 const config = require('./_lib/config');
 
-// Flat user payout: 1.17 points per MB shared, independent of traffic route.
-const BASE_POINTS_PER_MB = 1.17;
-const USER_SHARE = 1;
+// $0.15 per decimal GB gross revenue; the business keeps 20% ($0.03/GB).
+// Users receive the flat 1.17 points per MB, independent of traffic route.
+const POINTS_PER_MB = 1.17;
 
 // 100% deterministic checks. The same limits are also enforced atomically in SQL by
 // begin_report(); this second pass only looks at the numbers the database returned.
@@ -82,7 +82,6 @@ module.exports = wrap(async (req, res) => {
   // Step 2 (deterministic): speed and time checks on what the database recorded.
   const reportedMb = Number(begun.mb);
   const mb_shared = reportedMb;
-  const userPoints = Math.floor(mb_shared * 1.17);
   const problem = validate({
     mb: reportedMb,
     elapsed: Number(begun.elapsed_s),
@@ -93,8 +92,8 @@ module.exports = wrap(async (req, res) => {
   const { data: settled, error: settleErr } = await supabase.rpc('settle_report', {
     p_log_id: begun.log_id,
     p_valid: problem === null,
-    p_base_points_per_mb: BASE_POINTS_PER_MB,
-    p_user_share: USER_SHARE,
+    p_points_per_mb: POINTS_PER_MB,
+    p_vest_hours: config.vest_hours,
   });
   if (settleErr || !settled) return res.status(500).json({ error: 'db_error' });
 
@@ -105,5 +104,7 @@ module.exports = wrap(async (req, res) => {
     reason: awarded ? undefined : problem || 'rejected',
     mb_shared: reportedMb,
     points_awarded: Number(settled.points_awarded || 0),
+    gross_revenue_usd: Number(settled.gross_revenue_usd || 0),
+    business_revenue_usd: Number(settled.business_revenue_usd || 0),
   });
 });
