@@ -17,6 +17,8 @@ create table if not exists bandwidth_logs (
   mb_shared numeric not null,
   verified_by_ai boolean not null default false,
   points_awarded numeric not null default 0,
+  gross_revenue_usd numeric not null default 0,
+  business_revenue_usd numeric not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -42,6 +44,8 @@ alter table bandwidth_logs add column if not exists elapsed_s numeric;
 alter table bandwidth_logs add column if not exists max_mb numeric;
 alter table bandwidth_logs add column if not exists vests_at timestamptz;
 alter table bandwidth_logs add column if not exists settled_at timestamptz;
+alter table bandwidth_logs add column if not exists gross_revenue_usd numeric not null default 0;
+alter table bandwidth_logs add column if not exists business_revenue_usd numeric not null default 0;
 update bandwidth_logs set status = case when verified_by_ai then 'awarded' else 'rejected' end
  where status is null;
 alter table bandwidth_logs alter column status set default 'pending';
@@ -245,6 +249,8 @@ declare
   l bandwidth_logs%rowtype;
   d devices%rowtype;
   v_points numeric;
+  v_gross_revenue numeric;
+  v_business_revenue numeric;
 begin
   if p_points_per_mb is null or p_points_per_mb < 0 or p_points_per_mb > 10
      or p_vest_hours is null or p_vest_hours < 0 or p_vest_hours > 720 then
@@ -262,16 +268,26 @@ begin
   select * into d from devices where device_id = l.device_id for update;
 
   if coalesce(p_valid, false) and found and not d.frozen then
-    v_points := round(l.mb_shared * p_points_per_mb, 4);
+    -- Revenue model: $0.15 per decimal GB; business receives 20% ($0.03/GB).
+    v_points := floor(l.mb_shared * p_points_per_mb);
+    v_gross_revenue := round((l.mb_shared / 1000.0) * 0.15, 8);
+    v_business_revenue := round(v_gross_revenue * 0.20, 8);
     update bandwidth_logs
        set status = 'awarded', verified_by_ai = true, points_awarded = v_points,
+           gross_revenue_usd = v_gross_revenue,
+           business_revenue_usd = v_business_revenue,
            vests_at = now() + make_interval(hours => p_vest_hours), settled_at = now()
      where id = l.id;
     update devices
        set points_balance = points_balance + v_points,
            lifetime_mb = lifetime_mb + l.mb_shared
      where device_id = l.device_id;
-    return jsonb_build_object('status', 'awarded', 'points_awarded', v_points);
+    return jsonb_build_object(
+      'status', 'awarded',
+      'points_awarded', v_points,
+      'gross_revenue_usd', v_gross_revenue,
+      'business_revenue_usd', v_business_revenue
+    );
   end if;
 
   update bandwidth_logs set status = 'rejected', settled_at = now() where id = l.id;
