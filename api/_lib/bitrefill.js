@@ -3,9 +3,34 @@ const config = require('./config');
 const COUNTRY_MAP = { US: 'US', UK: 'GB', GB: 'GB', EG: 'EG', SA: 'SA' };
 
 function resolveUrl(pathOrUrl) {
-  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  if (pathOrUrl.startsWith('/v2/')) return new URL(config.bitrefill_base).origin + pathOrUrl;
-  return config.bitrefill_base + pathOrUrl;
+  const base = new URL(config.bitrefill_base);
+  let target;
+
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    target = new URL(pathOrUrl);
+    // Pagination links must stay on the configured Bitrefill API host.
+    if (target.origin !== base.origin) throw new Error('bad_bitrefill_url');
+
+    // Some API pagination links omit the configured /v2 prefix.
+    const basePath = base.pathname.replace(/\/+$/, '');
+    if (basePath && target.pathname !== basePath && !target.pathname.startsWith(basePath + '/')) {
+      target.pathname = basePath + (target.pathname.startsWith('/') ? target.pathname : '/' + target.pathname);
+    }
+  } else {
+    const path = String(pathOrUrl || '');
+    if (path.startsWith('/v2/')) {
+      target = new URL(path, base.origin);
+    } else {
+      target = new URL(path.replace(/^\/+/, ''), base.href.replace(/\/?$/, '/'));
+    }
+  }
+
+  const basePath = base.pathname.replace(/\/+$/, '');
+  if (target.origin !== base.origin ||
+      (basePath && target.pathname !== basePath && !target.pathname.startsWith(basePath + '/'))) {
+    throw new Error('bad_bitrefill_url');
+  }
+  return target.toString();
 }
 
 async function bitrefill(pathOrUrl, opts) {
