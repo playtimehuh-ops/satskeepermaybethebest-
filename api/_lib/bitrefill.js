@@ -151,4 +151,4 @@ function resolveSelection(product, packageId, value) {
   return byValue ? { package_id: byValue.package_id, value: byValue.value } : null;
 }
 
-module.exports = { COUNTRY_MAP, bitrefill, normalizeProduct, resolveSelection };
+module.exports = { COUNTRY_MAP, bitrefill, normalizeProduct, resolveSelection, resolveUrl };
