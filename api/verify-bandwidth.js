@@ -3,10 +3,9 @@ const { requireSession } = require('./_lib/auth');
 const { wrap, bodyOf } = require('./_lib/http');
 const config = require('./_lib/config');
 
-// Earning rate: set in api/_lib/config.js (2.5 points per MB, user keeps 80% = 2 points per MB
-// = $0.20 per GB at 10,000 points = $1). The database multiplies these as exact decimals.
-const BASE_POINTS_PER_MB = config.base_points_per_mb;
-const USER_SHARE = config.user_share;
+// Flat user payout: 1.17 points per MB shared, independent of traffic route.
+const BASE_POINTS_PER_MB = 1.17;
+const USER_SHARE = 1;
 
 // 100% deterministic checks. The same limits are also enforced atomically in SQL by
 // begin_report(); this second pass only looks at the numbers the database returned.
@@ -82,6 +81,8 @@ module.exports = wrap(async (req, res) => {
 
   // Step 2 (deterministic): speed and time checks on what the database recorded.
   const reportedMb = Number(begun.mb);
+  const mb_shared = reportedMb;
+  const userPoints = Math.floor(mb_shared * 1.17);
   const problem = validate({
     mb: reportedMb,
     elapsed: Number(begun.elapsed_s),
