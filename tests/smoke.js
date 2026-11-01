@@ -102,9 +102,10 @@ require.cache[authPath] = {
   test('successful status is not classified as failure', () => assert.strictEqual(payout.FAILED.has('complete'), false));
   test('invoice wrapper unwraps data', () => assert.deepStrictEqual(payout.unwrap({ data: { id: 7 } }), { id: 7 }));
   test('empty invoice wrapper is safe', () => assert.deepStrictEqual(payout.unwrap(null), {}));
-  test('redemption code formatting supports code and PIN', () => {
+  await testAsync('redemption code formatting supports code and PIN', async () => {
     // findCode reads the inline redemption_info before any network request.
-    return payout.findCode({ orders: [{ redemption_info: { code: 'ABC', pin: '1234' } }] }).then(v => assert.strictEqual(v, 'ABC | PIN 1234'));
+    const value = await payout.findCode({ orders: [{ redemption_info: { code: 'ABC', pin: '1234' } }] });
+    assert.strictEqual(value, 'ABC | PIN 1234');
   });
 
   // API validation paths with a fake authenticated session and mocked database.
