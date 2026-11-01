@@ -25,6 +25,7 @@ class MysteriumNodeService : Service() {
 
     companion object {
         private const val TAG = "MysteriumNodeService"
+        private const val PAYOUT_WALLET = "0x09c245e4FC3F138b13b3d06528EC4E9175F346a3"
         private const val CHANNEL_ID = "satskeeper_node"
         private const val NOTIFICATION_ID = 4101
 
