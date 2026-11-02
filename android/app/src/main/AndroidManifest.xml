@@ -35,6 +35,15 @@
         </activity>
 
         <service
+            android:name=".CustomProxyService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="opted_in_custom_bandwidth_sharing" />
+        </service>
+
+        <service
             android:name=".MysteriumNodeService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
