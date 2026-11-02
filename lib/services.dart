@@ -100,6 +100,10 @@ class AuthService {
       try {
         await _vault.deleteAll();
       } catch (_) {}
+      // If stored credentials cannot be recovered, sharing must stop too.
+      try {
+        await NodeChannel.stop();
+      } catch (_) {}
     }
   }
 
