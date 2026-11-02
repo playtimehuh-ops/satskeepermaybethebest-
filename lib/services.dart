@@ -429,8 +429,6 @@ String _friendlyApi(String code, int status) {
       return 'The gift card order failed. Your points were returned.';
     case 'payout_unknown':
       return 'The order status is unclear. Check Your gift cards in a few minutes before trying again.';
-    case 'auditor_unavailable':
-      return 'The verifier is busy. We\'ll retry automatically.';
   }
   return 'Something went wrong (error $status). Try again.';
 }
