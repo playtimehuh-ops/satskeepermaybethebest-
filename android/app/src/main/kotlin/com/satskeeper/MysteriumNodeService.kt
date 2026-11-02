@@ -164,21 +164,25 @@ class MysteriumNodeService : Service() {
     }
 
     private fun prepareIdentity(n: MobileNode) {
-        try {
-            val identity = n.getIdentity(GetIdentityRequest())
-            val status = identity.registrationStatus ?: ""
-            if (!status.equals("Registered", ignoreCase = true)) {
-                val address = identity.identityAddress
-                if (n.isFreeRegistrationEligible(address)) {
-                    val request = RegisterIdentityRequest()
-                    request.identityAddress = address
-                    request.token = ""
-                    n.registerIdentity(request)
-                }
-            }
-        } catch (t: Throwable) {
-            Log.w(TAG, "identity preparation failed: ${t.message}")
+        val identity = n.getIdentity(GetIdentityRequest())
+        val status = identity.registrationStatus ?: ""
+        if (status.equals("Registered", ignoreCase = true)) return
+
+        val address = identity.identityAddress
+        if (!n.isFreeRegistrationEligible(address)) {
+            throw IllegalStateException("Mysterium provider identity is not registered and is not eligible for free registration")
         }
+
+        val request = RegisterIdentityRequest()
+        request.identityAddress = address
+        request.token = ""
+        n.registerIdentity(request)
+
+        val verified = n.getIdentity(GetIdentityRequest())
+        if (!(verified.registrationStatus ?: "").equals("Registered", ignoreCase = true)) {
+            throw IllegalStateException("Mysterium provider identity registration was not confirmed")
+        }
+        Log.i(TAG, "provider identity registered")
     }
 
     private fun startNode() {
@@ -200,6 +204,7 @@ class MysteriumNodeService : Service() {
             } catch (t: Throwable) {
                 failure = t.message ?: t.javaClass.simpleName
                 Log.e(TAG, "failed to start node", t)
+                CustomProxyService.stop(this)
                 stopSelf()
             } finally {
                 starting = false
