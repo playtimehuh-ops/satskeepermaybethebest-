@@ -27,6 +27,13 @@ module.exports = wrap(async (req, res) => {
   if (!device_id) return;
 
   const body = bodyOf(req);
+  const requestedMb = typeof body.mb_shared === 'number' ? body.mb_shared : NaN;
+  const requestedReportId = typeof body.report_id === 'string' ? body.report_id : '';
+  if (!Number.isFinite(requestedMb) || requestedMb <= 0 ||
+      requestedMb > config.max_mb_per_report ||
+      !/^[A-Za-z0-9_-]{16,64}$/.test(requestedReportId)) {
+    return res.status(400).json({ error: 'bad_request' });
+  }
   // Client-reported process counters cannot prove Mysterium traffic. Never award points
   // from them; the proxy gateway records bytes measured server-side after successful relay.
   return res.status(409).json({ error: 'untrusted_measurement_source', valid: false, points_awarded: 0 });
