@@ -322,6 +322,9 @@ class NodeChannel {
       return true;
     } catch (_) {
       try {
+        await ProxyChannel.stop();
+      } catch (_) {}
+      try {
         await _channel.invokeMethod<bool>('stopNode');
       } catch (_) {}
       rethrow;
@@ -329,8 +332,15 @@ class NodeChannel {
   }
 
   static Future<void> stop() async {
-    await ProxyChannel.stop();
+    // Always stop the Mysterium service even if the Realtime proxy stop fails.
+    Object? proxyError;
+    try {
+      await ProxyChannel.stop();
+    } catch (e) {
+      proxyError = e;
+    }
     await _channel.invokeMethod<bool>('stopNode');
+    if (proxyError != null) throw proxyError;
   }
 
   static Future<bool> isRunning() async {
