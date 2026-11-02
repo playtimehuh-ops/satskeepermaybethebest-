@@ -5,7 +5,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.InetAddress
-import java.net.InterruptedIOException
+import java.io.InterruptedIOException
 import java.net.Proxy
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
