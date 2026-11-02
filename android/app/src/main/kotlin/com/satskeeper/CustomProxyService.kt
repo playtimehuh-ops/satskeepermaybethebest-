@@ -48,12 +48,8 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * Foreground service that turns this phone into a proxy exit for the Vercel gateway.
@@ -269,7 +265,6 @@ class CustomProxyService : Service() {
             val delivered = reply(client, requestId, outcome.messages)
             if (delivered && outcome.bytes > 0L) {
                 transferred.addAndGet(outcome.bytes)
-                trackBytes(config, requestId, outcome.bytes)
             }
         } catch (e: CancellationException) {
             throw e
@@ -302,32 +297,6 @@ class CustomProxyService : Service() {
                 runCatching { channel.unsubscribe() }
                 runCatching { client.realtime.removeChannel(channel) }
             }
-        }
-    }
-
-    // ------------------------------------------------------------------ accounting
-
-    /** Reports the bytes of one delivered request to the existing Vercel endpoint (best effort, 2 tries). */
-    private suspend fun trackBytes(config: Config, requestId: String, bytes: Long) = withContext(Dispatchers.IO) {
-        val json = buildJsonObject {
-            put("request_id", requestId)
-            put("bytes", bytes)
-        }.toString()
-        repeat(2) { attempt ->
-            val request = Request.Builder()
-                .url("${config.apiBase}/api/track-custom-bytes")
-                .header("x-app-key", config.appKey)
-                .header("Authorization", "Bearer ${tokenFlow.value}")
-                .post(json.toRequestBody("application/json".toMediaType()))
-                .build()
-            try {
-                apiHttp.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) return@withContext
-                }
-            } catch (e: IOException) {
-                Log.w(TAG, "track-custom-bytes failed: ${e.message}")
-            }
-            if (attempt == 0) delay(1_000L)
         }
     }
 
