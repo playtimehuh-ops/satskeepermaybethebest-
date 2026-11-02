@@ -42,6 +42,9 @@ module.exports = {
 
   // Max face value of one card (in the product's own currency). Redemption
   // always costs threshold_points, so this bounds the payout per redemption.
+  hasCardValueCap(currency) {
+    return Object.prototype.hasOwnProperty.call(caps, String(currency || '').toUpperCase());
+  },
   maxCardValue(currency) {
     const v = caps[String(currency || '').toUpperCase()];
     return Number.isFinite(v) ? v : 10;
