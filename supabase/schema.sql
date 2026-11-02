@@ -269,7 +269,7 @@ begin
 
   select * into d from devices where device_id = l.device_id for update;
 
-  if coalesce(p_valid, false) and found and not d.frozen then
+  if coalesce(p_valid, false) and found and not d.frozen and d.opted_in then
     -- Accounting estimate: $0.15 per decimal GB gross; 20% is allocated to the business.
     -- This is a configured estimate, not proof of revenue received from Mysterium.
     v_points := round(l.mb_shared * p_points_per_mb, 2);
