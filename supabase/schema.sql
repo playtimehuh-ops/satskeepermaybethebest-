@@ -521,6 +521,13 @@ notify pgrst, 'reload schema';
 
 -- ---------------------------------------------------------------- custom proxy schema and private Realtime authorization
 -- SatsKeeper custom proxy accounting and private Realtime authorization.
+create table if not exists public.proxy_logs (
+  id bigserial primary key,
+  device_id text not null,
+  request_id text not null unique,
+  bytes_used bigint not null check (bytes_used >= 0),
+  created_at timestamptz not null default now()
+);
 -- Award points only from bytes measured by the server after a successful proxy relay.
 -- request_id is unique in proxy_logs, making retries idempotent.
 create or replace function settle_proxy_usage(
@@ -597,13 +604,6 @@ $;
 revoke all on function settle_proxy_usage(text, text, bigint, numeric) from public, anon, authenticated;
 grant execute on function settle_proxy_usage(text, text, bigint, numeric) to service_role;
 
-create table if not exists public.proxy_logs (
-  id bigserial primary key,
-  device_id text not null,
-  request_id text not null unique,
-  bytes_used bigint not null check (bytes_used >= 0),
-  created_at timestamptz not null default now()
-);
 create index if not exists proxy_logs_device_time_idx on public.proxy_logs (device_id, created_at desc);
 alter table public.proxy_logs enable row level security;
 revoke all on public.proxy_logs from public, anon, authenticated;
