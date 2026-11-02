@@ -270,8 +270,9 @@ begin
   select * into d from devices where device_id = l.device_id for update;
 
   if coalesce(p_valid, false) and found and not d.frozen then
-    -- Revenue model: $0.15 per decimal GB; business receives 20% ($0.03/GB).
-    v_points := floor(l.mb_shared * p_points_per_mb);
+    -- Accounting estimate: $0.15 per decimal GB gross; 20% is allocated to the business.
+    -- This is a configured estimate, not proof of revenue received from Mysterium.
+    v_points := round(l.mb_shared * p_points_per_mb, 2);
     v_gross_revenue := round((l.mb_shared / 1000.0) * 0.15, 8);
     v_business_revenue := round(v_gross_revenue * 0.20, 8);
     update bandwidth_logs
