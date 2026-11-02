@@ -112,10 +112,11 @@ function normalizeProduct(p) {
   if (p.range && typeof p.range === 'object') {
     const min = toNumber(p.range.min);
     const rawMax = toNumber(p.range.max);
-    const step = toNumber(p.range.step) || 1;
+    const rawStep = toNumber(p.range.step);
+    const step = rawStep !== null && rawStep > 0 ? rawStep : 1;
     if (min !== null && rawMax !== null) {
       const max = Math.min(rawMax, cap);
-      if (min <= max) range = { min, max, step };
+      if (min > 0 && min <= max) range = { min, max, step };
     }
   }
 
