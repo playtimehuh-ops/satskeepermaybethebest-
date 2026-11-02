@@ -168,8 +168,8 @@ require.cache[authPath] = {
   const verifySource = fs.readFileSync(path.join(__dirname, '../api/verify-bandwidth.js'), 'utf8');
   const homeSource = fs.readFileSync(path.join(__dirname, '../lib/home.dart'), 'utf8');
   const appConfigSource = fs.readFileSync(path.join(__dirname, '../lib/config.dart'), 'utf8');
-  test('bandwidth reward rate comes from backend config', () => assert.match(verifySource, /POINTS_PER_MB = config\\.points_per_mb/));
-  test('client reward rate matches backend config', () => assert.match(appConfigSource, /pointsPerMb = 0\\.1/));
+  test('bandwidth reward rate comes from backend config', () => assert.ok(verifySource.includes('const POINTS_PER_MB = config.points_per_mb;')));
+  test('client reward rate matches backend config', () => assert.ok(appConfigSource.includes('static const double pointsPerMb = 0.1;')));
   test('consent screen does not claim an AI audit', () => assert.doesNotMatch(homeSource, /AI audit|AI auditor/i));
   test('client explains that UID traffic is not Mysterium-only', () => assert.match(homeSource, /does not independently verify Mysterium-only traffic/i));
 
