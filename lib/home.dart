@@ -10,15 +10,16 @@ import 'theme.dart';
 
 /// Stops sharing, tells the server, clears local flags and logs out.
 Future<void> signOutAndReset(NavigatorState nav) async {
-  try {
-    await Api.consent(false);
-  } catch (_) {
-    // best effort
-  }
+  // Stop local sharing first; a network outage must not keep the node running.
   try {
     await NodeChannel.stop();
   } catch (_) {
     // best effort
+  }
+  try {
+    await Api.consent(false);
+  } catch (_) {
+    // best effort; the local services are already stopped.
   }
   await LocalState.setOptedIn(false);
   nav.popUntil((route) => route.isFirst);
@@ -665,17 +666,27 @@ class _AccountScreenState extends State<AccountScreen> {
       _busy = true;
       _error = null;
     });
+    String? syncWarning;
     try {
-      await Api.consent(false);
-      await NodeChannel.stop();
+      // Immediately stop the local node/proxy, even when the network is unavailable.
+      try {
+        await NodeChannel.stop();
+      } catch (e) {
+        syncWarning = 'Local stop reported an error: $e';
+      }
+      try {
+        await Api.consent(false);
+      } on ApiException {
+        syncWarning = 'Sharing stopped on this phone, but the server could not be updated. Reconnect to sync consent.';
+      }
       await LocalState.setOptedIn(false);
       if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.of(context).pop();
       widget.onStopped();
-    } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
-    } on PlatformException catch (e) {
-      if (mounted) setState(() => _error = e.message ?? 'Couldn\'t stop the sharing service.');
+      if (syncWarning != null) {
+        messenger.showSnackBar(SnackBar(content: Text(syncWarning)));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
