@@ -329,7 +329,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         } on ApiException catch (e) {
           // Refusals (400/403) are final, so drop the report. Anything else keeps it and
           // retries with the same id on the next tick.
-          if (e.status == 400 || e.status == 403) await LocalState.clearPending();
+          if (e.status == 400 || e.status == 403 || e.status == 409) await LocalState.clearPending();
           if (mounted) setState(() => _lastReport = e.message);
         }
       }
