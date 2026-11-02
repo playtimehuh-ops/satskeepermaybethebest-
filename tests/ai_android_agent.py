@@ -7,7 +7,7 @@ API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 MODEL = os.getenv("NVIDIA_MODEL", "mistralai/mistral-large-4-1t-a52b")
 MAX_STEPS = 10
 REPORT = Path("ai-android-report.json")
-BLOCKED = re.compile(r"\b(start sharing|share bandwidth|redeem|purchase|buy now|withdraw|payout|send money|transfer|delete account|pay now)\b", re.I)
+BLOCKED = re.compile(r"\b(start|share|redeem|purchase|buy|withdraw|payout|send|transfer|delete|pay|enable|opt.?in|confirm|activate|connect)\b", re.I)
 
 def adb(*args, timeout=20):
     p = subprocess.run(["adb", *args], capture_output=True, text=True, timeout=timeout)
