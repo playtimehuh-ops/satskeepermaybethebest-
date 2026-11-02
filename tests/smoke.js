@@ -177,6 +177,9 @@ require.cache[authPath] = {
   test('consent screen does not claim an AI audit', () => assert.doesNotMatch(homeSource, /AI audit|AI auditor/i));
   test('client explains that UID traffic is not Mysterium-only', () => assert.match(homeSource, /does not independently verify Mysterium-only traffic/i));
 
+  test('client-supplied bandwidth measurements cannot earn points', () => assert.ok(verifySource.includes("untrusted_measurement_source")));
+  test('server-measured proxy usage is settled atomically', () => assert.ok(fs.readFileSync(path.join(__dirname, '../api/proxy-gateway.js'), 'utf8').includes("settle_proxy_usage")));
+
   // Check that important SQL invariants are present in the committed schema.
   const sql = fs.readFileSync(path.join(__dirname, '../supabase/schema.sql'), 'utf8');
   for (const [label, pattern] of [
