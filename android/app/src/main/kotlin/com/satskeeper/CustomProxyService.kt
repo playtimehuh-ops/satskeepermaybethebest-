@@ -393,3 +393,4 @@ class CustomProxyService : Service() {
         }
         wakeLock = null
     }
+}
