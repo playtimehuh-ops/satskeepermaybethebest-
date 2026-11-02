@@ -342,6 +342,49 @@ class NodeChannel {
   }
 }
 
+// Native custom-proxy bridge. Starts only as part of the explicit sharing-consent flow.
+class ProxyChannel {
+  static const MethodChannel _channel = MethodChannel('com.satskeeper/proxy');
+  static Timer? _refreshTimer;
+
+  static Future<void> start() async {
+    final session = AuthService.session.value;
+    final token = await AuthService.accessToken();
+    if (session == null || token == null || token.isEmpty) {
+      throw AuthException('Sign in again before enabling sharing.');
+    }
+    if (session.userId.length < 8 || AppConfig.appKey.isEmpty ||
+        AppConfig.supabaseUrl.isEmpty || AppConfig.supabaseAnonKey.isEmpty) {
+      throw AuthException('The sharing service is not configured correctly.');
+    }
+    await _channel.invokeMethod<bool>('startProxy', <String, dynamic>{
+      'supabaseUrl': AppConfig.supabaseUrl,
+      'supabaseAnonKey': AppConfig.supabaseAnonKey,
+      'apiBase': AppConfig.apiBase,
+      'appKey': AppConfig.appKey,
+      'deviceId': session.userId,
+      'accessToken': token,
+    });
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(minutes: 45), (_) async {
+      try {
+        final fresh = await AuthService.accessToken();
+        if (fresh != null && fresh.isNotEmpty) {
+          await _channel.invokeMethod<bool>('updateProxyToken', fresh);
+        }
+      } catch (_) {
+        // A later refresh can recover from temporary network failures.
+      }
+    });
+  }
+
+  static Future<void> stop() async {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    await _channel.invokeMethod<bool>('stopProxy');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Backend API
 // ---------------------------------------------------------------------------
