@@ -44,6 +44,8 @@ alter table bandwidth_logs add column if not exists elapsed_s numeric;
 alter table bandwidth_logs add column if not exists max_mb numeric;
 alter table bandwidth_logs add column if not exists vests_at timestamptz;
 alter table bandwidth_logs add column if not exists settled_at timestamptz;
+-- New reports are checked by deterministic server rules, not an AI auditor.
+alter table bandwidth_logs add column if not exists verified_by_rules boolean not null default false;
 alter table bandwidth_logs add column if not exists gross_revenue_usd numeric not null default 0;
 alter table bandwidth_logs add column if not exists business_revenue_usd numeric not null default 0;
 update bandwidth_logs set status = case when verified_by_ai then 'awarded' else 'rejected' end
@@ -234,7 +236,7 @@ begin
 end;
 $$;
 
--- Step 2: apply the auditor's verdict. Only a 'pending' report can be settled, once.
+-- Step 2: apply the deterministic server-rule verdict. Only a 'pending' report can be settled, once.
 create or replace function settle_report(
   p_log_id bigint,
   p_valid boolean,
@@ -273,7 +275,7 @@ begin
     v_gross_revenue := round((l.mb_shared / 1000.0) * 0.15, 8);
     v_business_revenue := round(v_gross_revenue * 0.20, 8);
     update bandwidth_logs
-       set status = 'awarded', verified_by_ai = true, points_awarded = v_points,
+       set status = 'awarded', verified_by_ai = false, verified_by_rules = true, points_awarded = v_points,
            gross_revenue_usd = v_gross_revenue,
            business_revenue_usd = v_business_revenue,
            vests_at = now() + make_interval(hours => p_vest_hours), settled_at = now()
