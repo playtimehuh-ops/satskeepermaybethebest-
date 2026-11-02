@@ -137,6 +137,12 @@ require.cache[authPath] = {
     const r = await invoke(verify, { body: { mb_shared: 2049, report_id: 'report_1234567890' } });
     assert.strictEqual(r.statusCode, 400);
   });
+  await testAsync('valid client report is rejected as an untrusted source', async () => {
+    const r = await invoke(verify, { body: { mb_shared: 1, report_id: 'report_1234567890' } });
+    assert.strictEqual(r.statusCode, 409);
+    assert.strictEqual(r.body.error, 'untrusted_measurement_source');
+    assert.strictEqual(r.body.points_awarded, 0);
+  });
   await testAsync('bandwidth rejects malformed report IDs', async () => {
     const r = await invoke(verify, { body: { mb_shared: 1, report_id: 'bad id' } });
     assert.strictEqual(r.statusCode, 400);
