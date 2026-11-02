@@ -168,10 +168,31 @@ require.cache[authPath] = {
     assert.strictEqual(r.statusCode, 400);
   });
 
-  test('currency-specific invoice cap is enforced', () => {
+  test('Cryptorefills redemption uses the fixed USD points conversion', () => {
     const redeemSource = fs.readFileSync(path.join(__dirname, '../api/redeem.js'), 'utf8');
-    assert.ok(redeemSource.includes('config.hasCardValueCap(currency)'));
-    assert.ok(redeemSource.includes('config.maxCardValue(currency)'));
+    assert.ok(redeemSource.includes('const POINTS_PER_USD = 10000;'));
+    assert.ok(redeemSource.includes('CRYPTOREFILLS_MOCK_MODE'));
+    assert.ok(redeemSource.includes("await refund(reserved.id, 'cryptorefills_mock_dry_run')"));
+  });
+
+  await testAsync('Cryptorefills dry-run reserves and refunds the USD point amount', async () => {
+    process.env.CRYPTOREFILLS_MOCK_MODE = 'true';
+    rpcCalls.length = 0;
+    const r = await invoke(redeem, { body: { product_id: 'amazon-us-10', country_code: 'US', amount: 5 } });
+    assert.strictEqual(r.statusCode, 200);
+    assert.strictEqual(r.body.points_required, 50000);
+    assert.strictEqual(r.body.points_refunded, true);
+    assert.strictEqual(r.body.code, null);
+    assert.deepStrictEqual(rpcCalls.map(x => x.name), ['reserve_redemption', 'refund_redemption']);
+    assert.strictEqual(rpcCalls[0].args.p_points, 50000);
+    delete process.env.CRYPTOREFILLS_MOCK_MODE;
+  });
+
+  await testAsync('Cryptorefills refuses live payments when the signer is not configured', async () => {
+    delete process.env.CRYPTOREFILLS_MOCK_MODE;
+    const r = await invoke(redeem, { body: { product_id: 'amazon-us-10', country_code: 'US', amount: 5 } });
+    assert.strictEqual(r.statusCode, 503);
+    assert.strictEqual(r.body.error, 'payment_adapter_not_configured');
   });
 
   // Keep displayed and awarded points aligned; no AI auditor is implemented.
