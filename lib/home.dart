@@ -234,7 +234,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _bootstrap() async {
     try {
-      if (!await NodeChannel.isRunning()) await NodeChannel.start();
+      // Always invoke start(): the Mysterium service may survive a UI restart while
+      // the non-sticky Realtime proxy service does not. start() safely reuses a live node.
+      final started = await NodeChannel.start();
+      if (!started) throw ApiException(0, 'The sharing service did not start.');
     } on PlatformException catch (e) {
       if (mounted) setState(() => _error = e.message ?? 'Couldn\'t start the sharing service.');
     }
