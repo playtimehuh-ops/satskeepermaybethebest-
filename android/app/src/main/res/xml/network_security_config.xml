@@ -2,6 +2,9 @@
 <network-security-config>
     <!-- HTTPS only, and only certificates from the system store. A user-installed
          CA (the usual way to snoop on an app's traffic) is not trusted. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
