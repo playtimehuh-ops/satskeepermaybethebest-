@@ -112,7 +112,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     ),
                     const _Fact(
                       'You earn 0.1 point per megabyte.',
-                      'Every minute the app reports what your phone really sent. An AI audit checks each report before points are added.',
+                      'The app reports bytes sent by its Android process. Server-side timing and volume rules check each report. This does not independently verify Mysterium-only traffic.',
                     ),
                     const _Fact(
                       'You can stop any time.',
@@ -210,7 +210,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double _available = 0;
   double _threshold = AppConfig.redeemCost.toDouble();
   int _streak = 0;
-  double _verifiedMb = 0;
+  double _acceptedMb = 0;
   final List<double> _history = <double>[];
   String? _lastReport;
   String? _error;
@@ -314,7 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final r = await Api.verifyBandwidth(mb, reportId);
           await LocalState.clearPending();
           final valid = r['valid'] == true;
-          if (valid && r['duplicate'] != true) _verifiedMb += mb;
+          if (valid && r['duplicate'] != true) _acceptedMb += mb;
           if (mounted) {
             setState(() {
               _lastReport = valid
@@ -412,19 +412,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ? 'Your card is full. Pick any gift card or top-up in the store.'
                           : holding
                               ? 'Your card is full. New points unlock 24 hours after they\'re earned.'
-                              : '${fmtNum(left)} points to go. Each megabyte shared earns 0.1 point.',
+                              : '${fmtNum(left)} points to go. Each reported megabyte earns ${AppConfig.pointsPerMb} point after server checks.',
                       style: T.small(c).copyWith(fontSize: 15),
                     ),
                     const SizedBox(height: 32),
                     Text('Recent reports', style: T.heading(c)),
                     const SizedBox(height: 4),
-                    Text('Megabytes sent per minute, newest on the right.', style: T.small(c)),
+                    Text('App network megabytes reported per minute, newest on the right.', style: T.small(c)),
                     const SizedBox(height: 14),
                     ThroughputBars(values: List<double>.of(_history)),
                     const SizedBox(height: 28),
                     Divider(height: 1, color: c.rule),
                     _InfoRow('Streak', '$_streak ${_streak == 1 ? 'day' : 'days'}'),
-                    _InfoRow('Verified this session', '${_verifiedMb.toStringAsFixed(2)} MB'),
+                    _InfoRow('Accepted reports this session', '${_acceptedMb.toStringAsFixed(2)} MB'),
                     _InfoRow('Last report', _lastReport ?? 'The first one is due within a minute.'),
                     if (_error != null)
                       Padding(
