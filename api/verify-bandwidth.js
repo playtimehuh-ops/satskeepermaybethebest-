@@ -27,6 +27,11 @@ module.exports = wrap(async (req, res) => {
   if (!device_id) return;
 
   const body = bodyOf(req);
+  // Client-reported process counters cannot prove Mysterium traffic. Never award points
+  // from them; the proxy gateway records bytes measured server-side after successful relay.
+  return res.status(409).json({ error: 'untrusted_measurement_source', valid: false, points_awarded: 0 });
+
+  /* Legacy report validation retained temporarily for migration comparison only.
   const mb = typeof body.mb_shared === 'number' ? Math.round(body.mb_shared * 1000) / 1000 : NaN;
   const report_id = typeof body.report_id === 'string' ? body.report_id : '';
   if (
@@ -106,4 +111,5 @@ module.exports = wrap(async (req, res) => {
     gross_revenue_usd: Number(settled.gross_revenue_usd || 0),
     business_revenue_usd: Number(settled.business_revenue_usd || 0),
   });
+  */
 });
