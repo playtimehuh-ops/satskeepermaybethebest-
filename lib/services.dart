@@ -308,10 +308,20 @@ class NodeChannel {
 
   static Future<bool> start() async {
     final ok = await _channel.invokeMethod<bool>('startNode');
-    return ok ?? false;
+    if (ok != true) return false;
+    try {
+      await ProxyChannel.start();
+      return true;
+    } catch (_) {
+      try {
+        await _channel.invokeMethod<bool>('stopNode');
+      } catch (_) {}
+      rethrow;
+    }
   }
 
   static Future<void> stop() async {
+    await ProxyChannel.stop();
     await _channel.invokeMethod<bool>('stopNode');
   }
 
