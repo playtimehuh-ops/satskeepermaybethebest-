@@ -34,6 +34,8 @@ jobs:
       APP_KEY: ${{ secrets.APP_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      NVIDIA_MODEL: mistralai/mistral-large-4-1t-a52b
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -93,6 +95,41 @@ jobs:
           --dart-define=APP_KEY="$APP_KEY"
           --dart-define=SUPABASE_URL="$SUPABASE_URL"
           --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+
+      # Build a separate emulator-only APK with non-production endpoints.
+      # The distributable release APK above keeps its configured release settings.
+      - name: Build isolated AI-test APK
+        if: env.NVIDIA_API_KEY != ''
+        run: |
+          flutter build apk --debug --target-platform android-x64
+          --dart-define=API_BASE=https://example.invalid
+          --dart-define=APP_KEY=ai-test-only
+          --dart-define=SUPABASE_URL=https://example.invalid
+          --dart-define=SUPABASE_ANON_KEY=ai-test-only
+
+      - name: Run NVIDIA vision agent in Android emulator
+        if: env.NVIDIA_API_KEY != ''
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            adb install build/app/outputs/flutter-apk/app-debug.apk
+            python3 tests/ai_android_agent.py
+
+      - name: Explain skipped AI emulator test
+        if: env.NVIDIA_API_KEY == ''
+        run: echo "::warning::NVIDIA_API_KEY is not configured; AI emulator exploration was skipped. Backend tests and APK build still run."
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-android-report
+          path: ai-android-report.json
+          if-no-files-found: ignore
+          retention-days: 14
 
       - uses: actions/upload-artifact@v4
         with:
