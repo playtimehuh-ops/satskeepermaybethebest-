@@ -133,29 +133,10 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
-            set -eu
-
-            # Recover ADB if the emulator appears before its transport is ready.
             adb start-server
             adb reconnect offline || true
-            for attempt in $(seq 1 60); do
-              state="$(adb get-state 2>/dev/null || true)"
-              if [ "$state" = "device" ]; then
-                break
-              fi
-              adb reconnect || true
-              sleep 5
-            done
-
             adb wait-for-device
-            for attempt in $(seq 1 120); do
-              booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
-              if [ "$booted" = "1" ]; then
-                break
-              fi
-              sleep 5
-            done
-
+            for attempt in $(seq 1 120); do booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"; [ "$booted" = "1" ] && break; sleep 5; done
             test "$(adb shell getprop sys.boot_completed | tr -d '\\r')" = "1"
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
