@@ -11,6 +11,7 @@ class AppConfig {
   static const String channelName = 'com.satskeeper/node';
   static const int reportIntervalSeconds = 60;
   static const int redeemCost = 5000;
+  static const double pointsPerMb = 0.1;
   static const int stampCount = 20;
   static const List<String> countries = ['US', 'UK', 'EG', 'SA'];
 }
