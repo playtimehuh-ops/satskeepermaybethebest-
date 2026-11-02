@@ -23,7 +23,7 @@ do $$ begin
     using (realtime.messages.extension = 'broadcast' and (select realtime.topic()) = 'proxy_device_' || (select auth.uid())::text) $p$;
   execute 'drop policy if exists proxy_response_send on realtime.messages';
   execute $p$ create policy proxy_response_send on realtime.messages for insert to authenticated
-    with check (realtime.messages.extension = 'broadcast' and (select realtime.topic()) like 'proxy\_response\_' || (select auth.uid())::text || '\\_%') $p$;
+    with check (realtime.messages.extension = 'broadcast' and (select realtime.topic()) like 'proxy\_response\_' || (select auth.uid())::text || '\_%') $p$;
   execute 'drop policy if exists proxy_gateway_all on realtime.messages';
   execute $p$ create policy proxy_gateway_all on realtime.messages for all to service_role using (true) with check (true) $p$;
 end $$;
