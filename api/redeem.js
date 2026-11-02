@@ -13,8 +13,11 @@ function overPriceCeiling(invoice) {
   if (!pay) return false;
   const currency = String(pay.currency || '').toUpperCase();
   const price = Number(pay.price);
-  if (currency === 'USD' && Number.isFinite(price)) return price > config.max_invoice_usd;
-  return false;
+  // Apply the product's own currency cap, not only the USD ceiling.
+  if (!currency || !Number.isFinite(price) || !config.hasCardValueCap(currency)) return true;
+  const currencyCap = config.maxCardValue(currency);
+  const cap = currency === 'USD' ? Math.min(currencyCap, config.max_invoice_usd) : currencyCap;
+  return price > cap;
 }
 
 module.exports = wrap(async (req, res) => {
