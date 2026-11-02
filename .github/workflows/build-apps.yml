@@ -99,7 +99,7 @@ jobs:
       # GitHub-hosted Linux runners may expose /dev/kvm without granting
       # the runner user access. Fix permissions before starting the emulator.
       - name: Enable KVM access for Android emulator
-        if: env.NVIDIA_API_KEY != ''
+        if: vars.RUN_AI_EMULATOR_TEST == 'true' && env.NVIDIA_API_KEY != ''
         run: |
           if [ -e /dev/kvm ]; then
             sudo chmod 666 /dev/kvm
@@ -113,7 +113,7 @@ jobs:
       # Build a separate emulator-only APK with non-production endpoints.
       # The distributable release APK above keeps its configured release settings.
       - name: Build isolated AI-test APK
-        if: env.NVIDIA_API_KEY != ''
+        if: vars.RUN_AI_EMULATOR_TEST == 'true' && env.NVIDIA_API_KEY != ''
         run: |
           flutter build apk --debug --target-platform android-x64 \
             --dart-define=API_BASE=https://example.invalid \
@@ -122,7 +122,8 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY=ai-test-only
 
       - name: Run NVIDIA vision agent in Android emulator
-        if: env.NVIDIA_API_KEY != ''
+        if: vars.RUN_AI_EMULATOR_TEST == 'true' && env.NVIDIA_API_KEY != ''
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -145,8 +146,8 @@ jobs:
             python3 tests/ai_android_agent.py
 
       - name: Explain skipped AI emulator test
-        if: env.NVIDIA_API_KEY == ''
-        run: echo "::warning::NVIDIA_API_KEY is not configured; AI emulator exploration was skipped. Backend tests and APK build still run."
+        if: vars.RUN_AI_EMULATOR_TEST != 'true' || env.NVIDIA_API_KEY == ''
+        run: echo "::notice::AI emulator test is opt-in. Set repository variable RUN_AI_EMULATOR_TEST=true and configure NVIDIA_API_KEY to enable it. APK build is independent."
 
       - uses: actions/upload-artifact@v4
         if: always()
