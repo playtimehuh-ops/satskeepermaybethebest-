@@ -10,11 +10,13 @@ const POLL_BUDGET_MS = 40000;
 // Returns true if the invoice price is known to exceed our hard ceiling.
 function overPriceCeiling(invoice) {
   const pay = invoice && invoice.payment;
-  if (!pay) return false;
+  if (!pay) return true;
   const currency = String(pay.currency || '').toUpperCase();
-  const price = Number(pay.price);
+  const rawPrice = pay.price;
+  const price = Number(rawPrice);
+  // Fail closed when the invoice price/currency cannot be checked.
+  if (rawPrice === null || rawPrice === undefined || rawPrice === '' || !Number.isFinite(price) || price <= 0 || !currency || !config.hasCardValueCap(currency)) return true;
   // Apply the product's own currency cap, not only the USD ceiling.
-  if (!currency || !Number.isFinite(price) || !config.hasCardValueCap(currency)) return true;
   const currencyCap = config.maxCardValue(currency);
   const cap = currency === 'USD' ? Math.min(currencyCap, config.max_invoice_usd) : currencyCap;
   return price > cap;
