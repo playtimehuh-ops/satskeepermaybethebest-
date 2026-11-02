@@ -378,11 +378,6 @@ class CustomProxyService : Service() {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
             val lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "satskeeper:proxy")
             lock.setReferenceCounted(false)
-        if (wakeLock?.isHeld == true) return
-        try {
-            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-            val lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "satskeeper:proxy")
-            lock.setReferenceCounted(false)
             lock.acquire()
             wakeLock = lock
         } catch (t: Throwable) {
