@@ -33,7 +33,7 @@ const authPath = require.resolve('../api/_lib/auth');
 const rpcCalls = [];
 const supabase = {
   auth: { getUser: async () => ({ data: { user: { id: 'test-device-123', email_confirmed_at: '2026-01-01' } }, error: null }) },
-  rpc: async (name, args) => { rpcCalls.push({ name, args }); return { data: null, error: null }; },
+  rpc: async (name, args) => { rpcCalls.push({ name, args }); if (name === 'reserve_redemption') return { data: { status: 'ok', id: 77 }, error: null }; if (name === 'refund_redemption') return { data: true, error: null }; return { data: null, error: null }; },
   from: () => ({
     upsert: async () => ({ error: null }),
     select() { return this; }, eq() { return this; }, not() { return this; },
