@@ -158,6 +158,12 @@ require.cache[authPath] = {
     assert.strictEqual(r.statusCode, 400);
   });
 
+  test('currency-specific invoice cap is enforced', () => {
+    const redeemSource = fs.readFileSync(path.join(__dirname, '../api/redeem.js'), 'utf8');
+    assert.match(redeemSource, /config\\.hasCardValueCap\\(currency\\)/);
+    assert.match(redeemSource, /config\\.maxCardValue\\(currency\\)/);
+  });
+
   // Keep displayed and awarded points aligned; no AI auditor is implemented.
   const verifySource = fs.readFileSync(path.join(__dirname, '../api/verify-bandwidth.js'), 'utf8');
   const homeSource = fs.readFileSync(path.join(__dirname, '../lib/home.dart'), 'utf8');
