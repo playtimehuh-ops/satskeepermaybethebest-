@@ -293,10 +293,14 @@ module.exports = wrap(async (req, res) => {
   if (!outcome.ok) return res.status(outcome.status).json({ error: outcome.error, request_id: requestId });
 
   // Usage is measured here, from what was really delivered, not from what the phone claims.
-  const logged = await supabase
-    .from('proxy_logs')
-    .insert({ device_id: deviceId, request_id: requestId, bytes_used: bodyBytes.length + outcome.body.length });
-  if (logged.error) console.error('proxy_log_failed', logged.error.message);
+  const measuredBytes = bodyBytes.length + outcome.body.length;
+  const settled = await supabase.rpc('settle_proxy_usage', {
+    p_device_id: deviceId,
+    p_request_id: requestId,
+    p_bytes_used: measuredBytes,
+    p_points_per_mb: 0.1,
+  });
+  if (settled.error) console.error('proxy_reward_settlement_failed', settled.error.message);
 
   for (const [k, v] of Object.entries(outcome.headers).slice(0, 50)) {
     const name = String(k).toLowerCase();
