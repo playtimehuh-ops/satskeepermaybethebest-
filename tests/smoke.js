@@ -77,6 +77,10 @@ require.cache[authPath] = {
   test('out-of-stock products are rejected', () => assert.strictEqual(bit.normalizeProduct({ ...raw, in_stock: false }), null));
   test('missing product ID is rejected', () => assert.strictEqual(bit.normalizeProduct({ name: 'x', packages: [{ value: 1 }] }), null));
   test('products with no valid purchasable options are rejected', () => assert.strictEqual(bit.normalizeProduct({ id: 'x', currency: 'USD', packages: [{ value: 99 }] }), null));
+  test('negative package range step defaults safely', () => {
+    const p = bit.normalizeProduct({ id: 'r', currency: 'USD', range: { min: 1, max: 10, step: -2 } });
+    assert.deepStrictEqual(p.range, { min: 1, max: 10, step: 1 });
+  });
   test('range values are capped to currency limit', () => {
     const p = bit.normalizeProduct({ id: 'r', currency: 'SAR', range: { min: 5, max: 100, step: 5 } });
     assert.deepStrictEqual(p.range, { min: 5, max: 40, step: 5 });
