@@ -21,6 +21,12 @@ android {
         jvmTarget = "17"
     }
 
+    // Work around an AndroidX Lifecycle lint detector crash with AGP 8.7.x.
+    // This disables only the crashing lint rule; Kotlin compilation remains enabled.
+    lint {
+        disable "NullSafeMutableLiveData"
+    }
+
     defaultConfig {
         applicationId "com.satskeeper"
         minSdkVersion 24
