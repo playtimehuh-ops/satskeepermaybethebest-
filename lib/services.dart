@@ -104,6 +104,10 @@ class AuthService {
   }
 
   static Future<void> _forget() async {
+    // A lost/expired login must never leave bandwidth-sharing services running.
+    try {
+      await NodeChannel.stop();
+    } catch (_) {}
     session.value = null;
     try {
       await _vault.delete(key: _vaultKey);
