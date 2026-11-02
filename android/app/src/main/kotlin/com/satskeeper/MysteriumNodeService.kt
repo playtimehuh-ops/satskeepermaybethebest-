@@ -25,7 +25,6 @@ class MysteriumNodeService : Service() {
 
     companion object {
         private const val TAG = "MysteriumNodeService"
-        private const val PAYOUT_WALLET = "0x09c245e4FC3F138b13b3d06528EC4E9175F346a3"
         private const val CHANNEL_ID = "satskeeper_node"
         private const val NOTIFICATION_ID = 4101
 
@@ -49,9 +48,9 @@ class MysteriumNodeService : Service() {
         }
 
         /**
-         * Real bytes transmitted by this app's UID since the node started.
-         * The node runs inside this process, so relayed traffic is counted by
-         * the kernel's per-UID counters. Returns 0 while the node is not running.
+         * Total bytes transmitted by this app process since the node started.
+         * This is NOT a Mysterium-only counter: API, Realtime and other app
+         * network traffic may also be included. Returns 0 while not running.
          */
         fun getBytesShared(): Long {
             if (!running) return 0L
