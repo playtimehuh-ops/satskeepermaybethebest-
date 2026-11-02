@@ -257,12 +257,12 @@ class CustomProxyService : Service() {
     private suspend fun handle(client: SupabaseClient, config: Config, gate: Semaphore, payload: JsonObject) {
         val requestId = TrafficRouter.requestIdOf(payload) ?: return
         if (!gate.tryAcquire()) {
-            reply(client, requestId, listOf(TrafficRouter.errorMessage(requestId, "busy")))
+            reply(client, config.deviceId, requestId, listOf(TrafficRouter.errorMessage(requestId, "busy")))
             return
         }
         try {
             val outcome = withContext(Dispatchers.IO) { router.execute(payload) }
-            val delivered = reply(client, requestId, outcome.messages)
+            val delivered = reply(client, config.deviceId, requestId, outcome.messages)
             if (delivered && outcome.bytes > 0L) {
                 transferred.addAndGet(outcome.bytes)
             }
@@ -276,9 +276,9 @@ class CustomProxyService : Service() {
     }
 
     /** Joins proxy_response_{request_id} and sends every chunk, in order, then leaves again. */
-    private suspend fun reply(client: SupabaseClient, requestId: String, messages: List<JsonObject>): Boolean {
+    private suspend fun reply(client: SupabaseClient, deviceId: String, requestId: String, messages: List<JsonObject>): Boolean {
         if (messages.isEmpty()) return false
-        val channel = client.realtime.channel("proxy_response_${config.deviceId}_$requestId") { isPrivate = true }
+        val channel = client.realtime.channel("proxy_response_${deviceId}_$requestId") { isPrivate = true }
         try {
             val joined = withTimeoutOrNull(JOIN_TIMEOUT_MS) {
                 channel.subscribe(blockUntilSubscribed = true)
