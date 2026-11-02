@@ -19,7 +19,6 @@ function envInt(name, fallback, min, max) {
 const caps = loadCaps();
 
 module.exports = {
-  payout_pct: 0.2,
   points_per_mb: 0.1,
   threshold_points: 5000,
 
@@ -35,8 +34,6 @@ module.exports = {
   max_redemptions_global_day: envInt('MAX_REDEMPTIONS_PER_DAY', 20, 1, 1000),
   max_invoice_usd: envInt('MAX_INVOICE_USD', 12, 1, 500),
 
-  nim_url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-  nim_model: process.env.NIM_MODEL || 'moonshotai/kimi-k3-instruct',
 
   bitrefill_base: (process.env.BITREFILL_BASE_URL || 'https://api.bitrefill.com/v2').replace(/\/+$/, ''),
 
