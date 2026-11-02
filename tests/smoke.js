@@ -160,8 +160,8 @@ require.cache[authPath] = {
 
   test('currency-specific invoice cap is enforced', () => {
     const redeemSource = fs.readFileSync(path.join(__dirname, '../api/redeem.js'), 'utf8');
-    assert.match(redeemSource, /config\\.hasCardValueCap\\(currency\\)/);
-    assert.match(redeemSource, /config\\.maxCardValue\\(currency\\)/);
+    assert.ok(redeemSource.includes('config.hasCardValueCap(currency)'));
+    assert.ok(redeemSource.includes('config.maxCardValue(currency)'));
   });
 
   // Keep displayed and awarded points aligned; no AI auditor is implemented.
