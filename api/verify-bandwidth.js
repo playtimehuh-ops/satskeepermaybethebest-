@@ -3,9 +3,9 @@ const { requireSession } = require('./_lib/auth');
 const { wrap, bodyOf } = require('./_lib/http');
 const config = require('./_lib/config');
 
-// $0.15 per decimal GB gross revenue; the business keeps 20% ($0.03/GB).
-// Users receive the flat 1.17 points per MB, independent of traffic route.
-const POINTS_PER_MB = 1.17;
+// One source of truth for the configured reward rate.
+// Reports are rule-checked; they are not independently verified by an AI auditor.
+const POINTS_PER_MB = config.points_per_mb;
 
 // 100% deterministic checks. The same limits are also enforced atomically in SQL by
 // begin_report(); this second pass only looks at the numbers the database returned.
@@ -81,7 +81,6 @@ module.exports = wrap(async (req, res) => {
 
   // Step 2 (deterministic): speed and time checks on what the database recorded.
   const reportedMb = Number(begun.mb);
-  const mb_shared = reportedMb;
   const problem = validate({
     mb: reportedMb,
     elapsed: Number(begun.elapsed_s),
