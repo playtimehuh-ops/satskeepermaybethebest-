@@ -2,7 +2,8 @@
   "functions": {
     "api/redeem.js": { "maxDuration": 60 },
     "api/verify-bandwidth.js": { "maxDuration": 30 },
-    "api/admin.js": { "maxDuration": 60 }
+    "api/admin.js": { "maxDuration": 60 },
+    "api/proxy-gateway.js": { "maxDuration": 30 }
   },
   "crons": [{ "path": "/api/admin?action=reconcile", "schedule": "0 6 * * *" }],
   "headers": [
