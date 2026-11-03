@@ -45,14 +45,18 @@ module.exports = wrap(async (req, res) => {
 
   try {
     const result = await validateOrder(req, payload);
-    const problems = Array.isArray(result && result.problems) ? result.problems : [];
+    if (!result || !Array.isArray(result.problems)) {
+      return res.status(502).json({ error: 'provider_invalid_response', validation_only: true });
+    }
+    const problems = result.problems;
+    const valid = problems.length === 0;
     return res.status(200).json({
-      ok: problems.length === 0,
+      ok: valid,
       provider: 'Cryptorefills',
       validation_only: true,
-      valid: problems.length === 0,
+      valid,
       problems,
-      message: problems.length === 0
+      message: valid
         ? 'Cryptorefills validation passed. No order or payment was created.'
         : 'Cryptorefills returned validation issues. No order or payment was created.',
     });
