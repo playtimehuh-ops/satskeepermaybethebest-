@@ -195,6 +195,21 @@ require.cache[authPath] = {
     assert.strictEqual(r.body.error, 'payment_adapter_not_configured');
   });
 
+  // CryptoRefills validation-only path must never create orders or reserve points.
+  const cryptoValidationSource = fs.readFileSync(path.join(__dirname, '../api/cryptorefills-validate.js'), 'utf8');
+  const cryptoClientSource = fs.readFileSync(path.join(__dirname, '../api/_lib/cryptorefills.js'), 'utf8');
+  test('CryptoRefills test endpoint is validation-only', () => {
+    assert.ok(cryptoValidationSource.includes('validation_only: true'));
+    assert.ok(cryptoValidationSource.includes("validateOrder(req, payload)"));
+    assert.doesNotMatch(cryptoValidationSource, /reserve_redemption|refund\s*\(/);
+    assert.doesNotMatch(cryptoClientSource, /['\"]\/v5\/orders['\"]/);
+    assert.ok(cryptoClientSource.includes("'/v5/orders/validations'"));
+  });
+  test('CryptoRefills validation requires server-side Partner ID', () => {
+    assert.ok(cryptoClientSource.includes('CRYPTOREFILLS_PARTNER_ID'));
+    assert.ok(cryptoClientSource.includes("'X-Cr-Application'"));
+  });
+
   // Keep displayed and awarded points aligned; no AI auditor is implemented.
   const verifySource = fs.readFileSync(path.join(__dirname, '../api/verify-bandwidth.js'), 'utf8');
   const homeSource = fs.readFileSync(path.join(__dirname, '../lib/home.dart'), 'utf8');
