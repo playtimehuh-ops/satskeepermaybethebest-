@@ -48,8 +48,12 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * Foreground service that turns this phone into a proxy exit for the Vercel gateway.
@@ -265,6 +269,7 @@ class CustomProxyService : Service() {
             val delivered = reply(client, config.deviceId, requestId, outcome.messages)
             if (delivered && outcome.bytes > 0L) {
                 transferred.addAndGet(outcome.bytes)
+                trackBytes(config, requestId)
             }
         } catch (e: CancellationException) {
             throw e
@@ -297,6 +302,34 @@ class CustomProxyService : Service() {
                 runCatching { channel.unsubscribe() }
                 runCatching { client.realtime.removeChannel(channel) }
             }
+        }
+    }
+
+    /**
+     * Ask the backend to credit this request. The backend reads bytes_used from proxy_logs;
+     * the byte count measured on the phone is intentionally not sent or trusted.
+     */
+    private fun trackBytes(config: Config, requestId: String) {
+        val token = tokenFlow.value
+        if (token.isBlank()) return
+        val body = buildJsonObject { put("request_id", requestId) }
+            .toString()
+            .toRequestBody("application/json; charset=utf-8".toMediaType())
+        val request = Request.Builder()
+            .url("${config.apiBase}/api/track-custom-bytes")
+            .post(body)
+            .header("Authorization", "Bearer $token")
+            .header("x-app-key", config.appKey)
+            .header("Content-Type", "application/json")
+            .build()
+        try {
+            apiHttp.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.w(TAG, "proxy byte-credit request failed: HTTP ${response.code}")
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "proxy byte-credit request failed: ${t.message}")
         }
     }
 
