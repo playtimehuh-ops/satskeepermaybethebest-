@@ -4,9 +4,60 @@ create table if not exists public.proxy_logs (
   device_id text not null,
   request_id text not null unique,
   bytes_used bigint not null check (bytes_used >= 0),
+  credited boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index if not exists proxy_logs_device_time_idx on public.proxy_logs (device_id, created_at desc);
+alter table public.proxy_logs add column if not exists credited boolean not null default false;
+
+-- Atomic, idempotent crediting: lock the measured log, mark it credited, and add points
+-- in the same transaction. Client-reported byte counts are never accepted.
+create or replace function public.credit_proxy_log(
+  p_device_id text,
+  p_request_id text,
+  p_points_per_mb numeric
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $
+declare
+  l public.proxy_logs%rowtype;
+  v_points numeric;
+begin
+  if p_device_id is null or p_request_id is null or p_points_per_mb is null
+     or p_points_per_mb < 0 or p_points_per_mb > 10 then
+    raise exception 'invalid_arguments';
+  end if;
+
+  select * into l
+    from public.proxy_logs
+   where request_id = p_request_id
+   for update;
+
+  if not found then
+    return jsonb_build_object('status', 'not_found');
+  end if;
+  if l.device_id <> p_device_id then
+    return jsonb_build_object('status', 'wrong_device');
+  end if;
+  if l.credited then
+    return jsonb_build_object('status', 'already_credited', 'bytes_used', l.bytes_used, 'points_awarded', 0);
+  end if;
+
+  v_points := round((l.bytes_used::numeric / 1000000) * p_points_per_mb, 2);
+  update public.proxy_logs set credited = true where id = l.id;
+  if v_points > 0 then
+    perform public.add_points(p_device_id, v_points);
+  end if;
+
+  return jsonb_build_object('status', 'credited', 'bytes_used', l.bytes_used, 'points_awarded', v_points);
+end;
+$;
+
+revoke all on function public.credit_proxy_log(text, text, numeric) from public, anon, authenticated;
+grant execute on function public.credit_proxy_log(text, text, numeric) to service_role;
 alter table public.proxy_logs enable row level security;
 revoke all on public.proxy_logs from public, anon, authenticated;
 revoke all on sequence public.proxy_logs_id_seq from public, anon, authenticated;
