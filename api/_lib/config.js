@@ -18,8 +18,13 @@ function envInt(name, fallback, min, max) {
 
 const caps = loadCaps();
 
+const base_points_per_mb = 2.5;
+const user_share = 0.8;
+
 module.exports = {
-  points_per_mb: 0.1,
+  base_points_per_mb,
+  user_share,
+  points_per_mb: base_points_per_mb * user_share,
   threshold_points: 5000,
 
   // Bandwidth report limits (enforced in SQL, not just here).
