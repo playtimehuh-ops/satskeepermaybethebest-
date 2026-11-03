@@ -205,7 +205,7 @@ require.cache[authPath] = {
   test('client explains that UID traffic is not Mysterium-only', () => assert.match(homeSource, /does not independently verify Mysterium-only traffic/i));
 
   test('client-supplied bandwidth measurements cannot earn points', () => assert.ok(verifySource.includes("untrusted_measurement_source")));
-  test('server-measured proxy usage is settled atomically', () => assert.ok(fs.readFileSync(path.join(__dirname, '../api/proxy-gateway.js'), 'utf8').includes("settle_proxy_usage")));
+  test('gateway logs server-measured proxy bytes for idempotent crediting', () => { const gateway = fs.readFileSync(path.join(__dirname, '../api/proxy-gateway.js'), 'utf8'); const proxySql = fs.readFileSync(path.join(__dirname, '../supabase/proxy-schema.sql'), 'utf8'); assert.ok(gateway.includes("from('proxy_logs').insert")); assert.ok(gateway.includes('bytes_used: measuredBytes')); assert.ok(proxySql.includes('credit_proxy_log')); assert.ok(proxySql.includes('credited boolean not null default false')); });
 
   // Check that important SQL invariants are present in the committed schema.
   const sql = fs.readFileSync(path.join(__dirname, '../supabase/schema.sql'), 'utf8');
