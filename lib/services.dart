@@ -589,6 +589,20 @@ class Api {
     return raw.whereType<Map<String, dynamic>>().map(Product.fromJson).toList();
   }
 
+  // Provider-side preflight only: this never creates an order or requests payment.
+  static Future<Map<String, dynamic>> validateGiftCard({
+    required String brandName,
+    required String countryCode,
+    required String denomination,
+    required String beneficiaryEmail,
+  }) =>
+      _send('POST', '/api/cryptorefills-validate', body: {
+        'brand_name': brandName,
+        'country_code': countryCode,
+        'denomination': denomination,
+        'beneficiary_email': beneficiaryEmail,
+      });
+
   static Future<Map<String, dynamic>> redeem(String productId, String? packageId, double value) {
     final body = <String, dynamic>{'product_id': productId, 'value': value};
     if (packageId != null) body['package_id'] = packageId;
