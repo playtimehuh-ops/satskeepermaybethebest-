@@ -21,7 +21,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $function$
 declare
   l public.proxy_logs%rowtype;
   v_points numeric;
@@ -54,7 +54,7 @@ begin
 
   return jsonb_build_object('status', 'credited', 'bytes_used', l.bytes_used, 'points_awarded', v_points);
 end;
-$;
+$function$;
 
 revoke all on function public.credit_proxy_log(text, text, numeric) from public, anon, authenticated;
 grant execute on function public.credit_proxy_log(text, text, numeric) to service_role;
