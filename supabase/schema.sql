@@ -56,6 +56,11 @@ alter table bandwidth_logs alter column status set not null;
 
 alter table redemptions add column if not exists updated_at timestamptz not null default now();
 alter table redemptions add column if not exists note text;
+alter table redemptions add column if not exists beneficiary_email text;
+alter table redemptions add column if not exists product_name text;
+alter table redemptions add column if not exists reward_amount numeric;
+alter table redemptions add column if not exists reward_currency text;
+alter table redemptions add column if not exists notification_status text not null default 'pending';
 
 -- ---------------------------------------------------------------- constraints
 do $$
@@ -308,7 +313,9 @@ as $$
 declare
   d devices%rowtype;
 begin
-  if p_device_id is null or p_points is null or p_points <= 0 then
+  if p_device_id is null or p_points is null or p_points <= 0
+     or p_beneficiary_email is null or length(p_beneficiary_email) > 254
+     or p_reward_amount is null or p_reward_amount <= 0 then
     return false;
   end if;
   select * into d from devices where device_id = p_device_id for update;
@@ -329,6 +336,10 @@ create or replace function reserve_redemption(
   p_device_id text,
   p_points numeric,
   p_product_id text,
+  p_product_name text,
+  p_reward_amount numeric,
+  p_reward_currency text,
+  p_beneficiary_email text,
   p_user_limit int,
   p_global_limit int
 )
@@ -374,8 +385,8 @@ begin
   end if;
 
   update devices set points_balance = points_balance - p_points where device_id = p_device_id;
-  insert into redemptions (device_id, points_spent, status, product_id)
-  values (p_device_id, p_points, 'pending', left(p_product_id, 128))
+  insert into redemptions (device_id, points_spent, status, product_id, product_name, reward_amount, reward_currency, beneficiary_email)
+  values (p_device_id, p_points, 'pending', left(p_product_id, 128), left(p_product_name, 128), p_reward_amount, left(p_reward_currency, 12), lower(trim(p_beneficiary_email)))
   returning id into v_id;
 
   return jsonb_build_object('status', 'ok', 'id', v_id);
