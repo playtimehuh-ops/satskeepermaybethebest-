@@ -313,9 +313,7 @@ as $$
 declare
   d devices%rowtype;
 begin
-  if p_device_id is null or p_points is null or p_points <= 0
-     or p_beneficiary_email is null or length(p_beneficiary_email) > 254
-     or p_reward_amount is null or p_reward_amount <= 0 then
+  if p_device_id is null or p_points is null or p_points <= 0 then
     return false;
   end if;
   select * into d from devices where device_id = p_device_id for update;
@@ -346,14 +344,18 @@ create or replace function reserve_redemption(
 returns jsonb
 language plpgsql
 set search_path = public, pg_temp
-as $$
+as $
 declare
   d devices%rowtype;
   v_avail numeric;
   v_count int;
   v_id bigint;
 begin
-  if p_device_id is null or p_points is null or p_points <= 0 then
+  if p_device_id is null or p_points is null or p_points <= 0
+     or p_beneficiary_email is null or length(trim(p_beneficiary_email)) > 254
+     or p_reward_amount is null or p_reward_amount <= 0
+     or p_product_name is null or length(trim(p_product_name)) = 0
+     or p_reward_currency is null then
     return jsonb_build_object('status', 'bad_request');
   end if;
 
