@@ -584,8 +584,8 @@ class _ProductSheetState extends State<ProductSheet> {
             Text('Request submitted', style: T.title(c)),
             const SizedBox(height: 10),
             Text(
-              'Your points are spent and the order is paid, but the code hasn\'t arrived yet. '
-              "You'll find it under Your gift cards in Account once it arrives. Reference #${_reference ?? 'unknown'}.",
+              'Your points have been reserved for this manual payout request. Estimated processing time: 0–48 hours. '
+              'We will contact you at ${_payoutEmail.text.trim()}. Reference #${_reference ?? 'unknown'}.',
               style: T.body(c).copyWith(color: c.muted),
             ),
             const SizedBox(height: 24),
