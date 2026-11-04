@@ -603,8 +603,8 @@ class Api {
         'beneficiary_email': beneficiaryEmail,
       });
 
-  static Future<Map<String, dynamic>> redeem(String productId, String? packageId, double value) {
-    final body = <String, dynamic>{'product_id': productId, 'value': value};
+  static Future<Map<String, dynamic>> redeem(String productId, String productName, String currency, String beneficiaryEmail, String? packageId, double value) {
+    final body = <String, dynamic>{'product_id': productId, 'product_name': productName, 'currency': currency, 'beneficiary_email': beneficiaryEmail, 'value': value};
     if (packageId != null) body['package_id'] = packageId;
     return _send('POST', '/api/redeem', body: body, timeout: const Duration(seconds: 75));
   }
