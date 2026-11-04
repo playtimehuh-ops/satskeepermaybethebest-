@@ -330,6 +330,7 @@ class _ProductSheetState extends State<ProductSheet> {
   _Phase _phase = _Phase.choose;
   int _selected = 0;
   final TextEditingController _amount = TextEditingController();
+  final TextEditingController _payoutEmail = TextEditingController();
   String? _amountError;
   String? _error;
   String? _code;
@@ -344,6 +345,7 @@ class _ProductSheetState extends State<ProductSheet> {
   @override
   void dispose() {
     _amount.dispose();
+    _payoutEmail.dispose();
     super.dispose();
   }
 
@@ -384,7 +386,7 @@ class _ProductSheetState extends State<ProductSheet> {
       _error = null;
     });
     try {
-      final r = await Api.redeem(widget.product.id, packageId, value);
+      final r = await Api.redeem(widget.product.id, widget.product.name, widget.product.currency ?? 'USD', _payoutEmail.text.trim(), packageId, value);
       _redeemed = true;
       HapticFeedback.mediumImpact();
       if (!mounted) return;
@@ -483,7 +485,21 @@ class _ProductSheetState extends State<ProductSheet> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   error: _amountError,
                 ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+              Text('Where should we send your reward?', style: T.small(c)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _payoutEmail,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                decoration: InputDecoration(
+                  hintText: 'Your payout email address',
+                  filled: true,
+                  fillColor: c.ground,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 20),
               Divider(height: 1, color: c.rule),
               _SummaryRow('Cost', '${fmtNum(_cost)} points'),
               _SummaryRow(
@@ -517,7 +533,7 @@ class _ProductSheetState extends State<ProductSheet> {
                 const CircularProgressIndicator(),
                 const SizedBox(height: 18),
                 Text(
-                  'Buying your card. This can take up to a minute.',
+                  'Submitting your manual payout request…',
                   textAlign: TextAlign.center,
                   style: T.small(c).copyWith(fontSize: 15),
                 ),
@@ -565,7 +581,7 @@ class _ProductSheetState extends State<ProductSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Still being delivered', style: T.title(c)),
+            Text('Request submitted', style: T.title(c)),
             const SizedBox(height: 10),
             Text(
               'Your points are spent and the order is paid, but the code hasn\'t arrived yet. '
