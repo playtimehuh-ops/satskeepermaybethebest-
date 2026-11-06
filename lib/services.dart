@@ -441,6 +441,14 @@ String _friendlyApi(String code, int status) {
       return 'Pick one of the listed amounts.';
     case 'payout_failed':
       return 'The gift card order failed. Your points were returned.';
+    case 'wheel_cooldown':
+      return 'Your free spin is not ready yet. Check back after the 24-hour cooldown.';
+    case 'plan_already_active':
+      return 'That membership is already active.';
+    case 'downgrade_not_allowed':
+      return 'Your current membership is higher. You can change plans after it expires.';
+    case 'invalid_plan':
+      return 'That membership option is not available.';
     case 'payout_unknown':
       return 'The order status is unclear. Check Your gift cards in a few minutes before trying again.';
   }
