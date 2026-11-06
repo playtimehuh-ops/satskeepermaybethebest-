@@ -15,11 +15,13 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   int _mode = 0; // 0 = log in, 1 = create account
   final TextEditingController _email = TextEditingController();
+  final TextEditingController _emailConfirm = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _confirm = TextEditingController();
   bool _showPassword = false;
   bool _busy = false;
   String? _emailError;
+  String? _emailConfirmError;
   String? _passwordError;
   String? _confirmError;
   String? _formError;
@@ -28,6 +30,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void dispose() {
     _email.dispose();
+    _emailConfirm.dispose();
     _password.dispose();
     _confirm.dispose();
     super.dispose();
@@ -38,11 +41,13 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _mode = mode;
       _emailError = null;
+      _emailConfirmError = null;
       _passwordError = null;
       _confirmError = null;
       _formError = null;
       _info = null;
       _confirm.clear();
+      _emailConfirm.clear();
     });
   }
 
@@ -53,9 +58,13 @@ class _AuthScreenState extends State<AuthScreen> {
     final password = _password.text;
 
     String? emailError;
+    String? emailConfirmError;
     String? passwordError;
     String? confirmError;
     if (!_emailPattern.hasMatch(email)) emailError = 'Enter a valid email address.';
+    if (_mode == 1 && _emailConfirm.text.trim().toLowerCase() != email.toLowerCase()) {
+      emailConfirmError = 'Email addresses must match.';
+    }
     if (password.isEmpty) {
       passwordError = 'Enter your password.';
     } else if (_mode == 1 && password.length < 8) {
@@ -64,9 +73,10 @@ class _AuthScreenState extends State<AuthScreen> {
     if (_mode == 1 && password.isNotEmpty && _confirm.text != password) {
       confirmError = 'The passwords don\'t match.';
     }
-    if (emailError != null || passwordError != null || confirmError != null) {
+    if (emailError != null || emailConfirmError != null || passwordError != null || confirmError != null) {
       setState(() {
         _emailError = emailError;
+        _emailConfirmError = emailConfirmError;
         _passwordError = passwordError;
         _confirmError = confirmError;
         _formError = null;
@@ -169,6 +179,17 @@ class _AuthScreenState extends State<AuthScreen> {
                       autofillHints: const [AutofillHints.email],
                       error: _emailError,
                     ),
+                    if (signup) ...[
+                      const SizedBox(height: 18),
+                      FieldLine(
+                        label: 'Confirm email',
+                        controller: _emailConfirm,
+                        keyboardType: TextInputType.emailAddress,
+                        action: TextInputAction.next,
+                        autofillHints: const [AutofillHints.email],
+                        error: _emailConfirmError,
+                      ),
+                    ],
                     const SizedBox(height: 22),
                     FieldLine(
                       label: 'Password',
