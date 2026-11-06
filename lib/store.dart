@@ -1,3 +1,10 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'config.dart';
+import 'services.dart';
+import 'theme.dart';
+
 String _countryLabel(String code) {
   const names = <String, String>{
     'AE': 'United Arab Emirates', 'AU': 'Australia', 'BR': 'Brazil',
@@ -11,13 +18,6 @@ String _countryLabel(String code) {
   };
   return '${names[code] ?? code} ($code)';
 }
-
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-import 'config.dart';
-import 'services.dart';
-import 'theme.dart';
 
 String fmtAmount(double v) => v == v.roundToDouble() ? fmtNum(v) : v.toStringAsFixed(2);
 
