@@ -99,7 +99,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     Text('Before you start sharing', style: T.title(c)),
                     const SizedBox(height: 12),
                     Text(
-                      'SatsKeeper runs a Mysterium node on your phone. Here is what that means.',
+                      'GainDeep runs a Mysterium node on your phone. Here is what that means.',
                       style: T.body(c).copyWith(color: c.muted),
                     ),
                     const SizedBox(height: 32),
@@ -372,7 +372,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           children: [
             TopBar(
-              title: 'SatsKeeper',
+              title: 'GainDeep',
               trailing: Semantics(
                 button: true,
                 label: 'Account',
