@@ -9,7 +9,7 @@
 
     <application
         android:name="${applicationName}"
-        android:label="SatsKeeper"
+        android:label="GainDeep"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
