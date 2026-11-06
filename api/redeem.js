@@ -22,7 +22,7 @@ async function sendAdminNotice(redemption, accountEmail) {
   });
   if (!tokenResp.ok) throw new Error('gmail_token_failed');
   const token = await tokenResp.json();
-  const subject = 'SatsKeeper redemption request #' + redemption.id;
+  const subject = 'GainDeep redemption request #' + redemption.id;
   const lines = [
     'A new manual payout request was submitted.',
     '',
