@@ -93,6 +93,7 @@ declare
   d public.devices%rowtype;
   v_last timestamptz;
   v_prize integer;
+  v_roll numeric;
   v_next timestamptz;
 begin
   if p_device_id is null then return jsonb_build_object('status','bad_request'); end if;
@@ -107,16 +108,15 @@ begin
   end if;
 
   -- Weighted server-side draw: 0 (10%), 5 (30%), 10 (30%), 15 (20%), 25 (8%), 50 (2%).
+  v_roll := random();
   v_prize := case
-    when random() < 0.10 then 0
-    when random() < 0.333333 then 5
-    when random() < 0.50 then 10
-    when random() < 0.80 then 15
-    when random() < 0.90 then 25
+    when v_roll < 0.10 then 0
+    when v_roll < 0.40 then 5
+    when v_roll < 0.70 then 10
+    when v_roll < 0.90 then 15
+    when v_roll < 0.98 then 25
     else 50
   end;
-  -- Use one draw for mutually exclusive, documented probability bands.
-  -- The branch probabilities above are intentionally normalized by the sequential draws.
   insert into public.wheel_spins(device_id,points_awarded) values (p_device_id,v_prize);
   update public.devices set points_balance = points_balance + v_prize where device_id = p_device_id;
   v_next := now() + interval '24 hours';
