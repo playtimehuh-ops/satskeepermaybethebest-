@@ -110,7 +110,7 @@ class MysteriumNodeService : Service() {
             null
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("SatsKeeper is sharing bandwidth")
+            .setContentTitle("GainDeep is sharing bandwidth")
             .setContentText("Mysterium node is running")
             .setSmallIcon(android.R.drawable.stat_sys_upload)
             .setOngoing(true)
