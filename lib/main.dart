@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'auth_screen.dart';
+import 'approval_screen.dart';
 import 'home.dart';
 import 'services.dart';
 import 'theme.dart';
@@ -61,7 +62,14 @@ class Gate extends StatelessWidget {
           });
           return const AuthScreen();
         }
-        return SignedInFlow(key: ValueKey<String>(session.userId), session: session);
+        return FutureBuilder<String>(
+          future: AuthService.approvalStatus(),
+          builder: (context, approval) {
+            if (approval.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            if (approval.hasError || approval.data != 'approved') return const ApprovalScreen();
+            return SignedInFlow(key: ValueKey<String>(session.userId), session: session);
+          },
+        );
       },
     );
   }
