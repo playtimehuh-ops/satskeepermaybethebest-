@@ -112,7 +112,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                       'Encrypted traffic from Mysterium users leaves through your IP address and counts against your data plan.',
                     ),
                     const _Fact(
-                      'You earn 0.1 point per megabyte.',
+                      'You earn 2 points per megabyte.',
                       'The app reports bytes sent by its Android process. Server-side timing and volume rules check each report. This does not independently verify Mysterium-only traffic.',
                     ),
                     const _Fact(
