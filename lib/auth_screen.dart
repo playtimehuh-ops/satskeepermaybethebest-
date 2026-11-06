@@ -143,7 +143,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   children: [
                     const SizedBox(height: 56),
                     Text(
-                      'SatsKeeper',
+                      'GainDeep',
                       style: T.title(c).copyWith(fontSize: 40, letterSpacing: -1.4),
                     ),
                     const SizedBox(height: 10),
