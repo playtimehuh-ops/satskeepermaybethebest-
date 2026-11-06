@@ -349,7 +349,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String get _status {
-    if (_node['error'] != null) {\n      final detail = _node['error'].toString().trim();\n      return detail.isEmpty ? 'Error' : 'Error: ${detail.length > 34 ? '${detail.substring(0, 34)}…' : detail}';\n    }
+    if (_node['error'] != null) {
+      final detail = _node['error'].toString().trim();
+      return detail.isEmpty ? 'Error' : 'Error: ${detail.length > 34 ? '${detail.substring(0, 34)}…' : detail}';
+    }
     if (_node['running'] == true) return 'Sharing';
     if (_node['starting'] == true) return 'Starting';
     return 'Not running';
@@ -519,7 +522,15 @@ class StampCard extends StatelessWidget {
                   const Spacer(),
                   PulseDot(color: active ? c.punch : onCard.withAlpha(130), active: active, size: 8),
                   const SizedBox(width: 2),
-                  Flexible(\n                    child: Text(\n                      status,\n                      maxLines: 1,\n                      overflow: TextOverflow.ellipsis,\n                      textAlign: TextAlign.right,\n                      style: T.small(c).copyWith(color: onCard.withAlpha(225)),\n                    ),\n                  ),
+                  Flexible(
+                    child: Text(
+                      status,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: T.small(c).copyWith(color: onCard.withAlpha(225)),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 22),
