@@ -31,12 +31,13 @@ async function invoke(handler, req = {}) {
 const supabasePath = require.resolve('../api/_lib/supabase');
 const authPath = require.resolve('../api/_lib/auth');
 const rpcCalls = [];
+let rpcResponse = null;
 const supabase = {
   auth: {
     getUser: async () => ({ data: { user: { id: 'test-device-123', email_confirmed_at: '2026-01-01' } }, error: null }),
     admin: { getUserById: async () => ({ data: { user: { email: 'account@example.com' } }, error: null }) },
   },
-  rpc: async (name, args) => { rpcCalls.push({ name, args }); if (name === 'reserve_redemption') return { data: { status: 'ok', id: 77 }, error: null }; if (name === 'refund_redemption') return { data: true, error: null }; return { data: null, error: null }; },
+  rpc: async (name, args) => { rpcCalls.push({ name, args }); if (rpcResponse) return { data: rpcResponse, error: null }; if (name === 'reserve_redemption') return { data: { status: 'ok', id: 77 }, error: null }; if (name === 'refund_redemption') return { data: true, error: null }; return { data: null, error: null }; },
   from: () => ({
     upsert: async () => ({ error: null }),
     select() { return this; }, update() { return this; }, eq() { return this; }, not() { return this; },
@@ -122,6 +123,7 @@ require.cache[authPath] = {
   const verify = require('../api/verify-bandwidth');
   const catalog = require('../api/get-catalog');
   const redeem = require('../api/redeem');
+  const rewards = require('../api/rewards');
   await testAsync('consent rejects a non-boolean preference', async () => {
     const r = await invoke(consent, { body: { opted_in: 'yes' } });
     assert.strictEqual(r.statusCode, 400);
@@ -194,6 +196,54 @@ require.cache[authPath] = {
     assert.strictEqual(rpcCalls[0].args.p_points, 5000);
   });
 
+
+  // Membership and wheel API use server-side RPCs only.
+  await testAsync('rewards endpoint rejects unsupported methods', async () => {
+    const r = await invoke(rewards, { method: 'DELETE' });
+    assert.strictEqual(r.statusCode, 405);
+  });
+  await testAsync('membership rejects an unknown plan before database access', async () => {
+    rpcCalls.length = 0;
+    const r = await invoke(rewards, { body: { action: 'purchase_plan', plan: 'diamond' } });
+    assert.strictEqual(r.statusCode, 400);
+    assert.strictEqual(r.body.error, 'invalid_plan');
+    assert.strictEqual(rpcCalls.length, 0);
+  });
+  await testAsync('wheel award comes from the atomic server RPC', async () => {
+    rpcCalls.length = 0;
+    rpcResponse = { status: 'awarded', points_awarded: 25, next_spin_at: '2026-11-08T00:00:00Z' };
+    const r = await invoke(rewards, { body: { action: 'spin' } });
+    rpcResponse = null;
+    assert.strictEqual(r.statusCode, 200);
+    assert.strictEqual(r.body.points_awarded, 25);
+    assert.deepStrictEqual(rpcCalls.map(x => x.name), ['spin_gain_deep_wheel']);
+    assert.strictEqual(rpcCalls[0].args.p_device_id, 'test-device-123');
+  });
+  await testAsync('wheel cooldown is surfaced as HTTP 429', async () => {
+    rpcResponse = { status: 'cooldown', next_spin_at: '2026-11-08T00:00:00Z' };
+    const r = await invoke(rewards, { body: { action: 'spin' } });
+    rpcResponse = null;
+    assert.strictEqual(r.statusCode, 429);
+    assert.strictEqual(r.body.error, 'wheel_cooldown');
+  });
+  await testAsync('plan purchase deducts points through the database RPC', async () => {
+    rpcCalls.length = 0;
+    rpcResponse = { status: 'purchased', plan: 'plus', points_spent: 2500, expires_at: '2026-12-06T00:00:00Z' };
+    const r = await invoke(rewards, { body: { action: 'purchase_plan', plan: 'plus' } });
+    rpcResponse = null;
+    assert.strictEqual(r.statusCode, 200);
+    assert.strictEqual(r.body.points_spent, 2500);
+    assert.deepStrictEqual(rpcCalls.map(x => x.name), ['purchase_gain_deep_plan']);
+    assert.strictEqual(rpcCalls[0].args.p_plan, 'plus');
+  });
+  await testAsync('insufficient points is not treated as a successful plan purchase', async () => {
+    rpcResponse = { status: 'insufficient_points', required: 2500, available: 100 };
+    const r = await invoke(rewards, { body: { action: 'purchase_plan', plan: 'plus' } });
+    rpcResponse = null;
+    assert.strictEqual(r.statusCode, 409);
+    assert.strictEqual(r.body.error, 'insufficient_points');
+  });
+
   // CryptoRefills validation-only path must never create orders or reserve points.
   const cryptoValidationSource = fs.readFileSync(path.join(__dirname, '../api/cryptorefills-validate.js'), 'utf8');
   const cryptoClientSource = fs.readFileSync(path.join(__dirname, '../api/_lib/cryptorefills.js'), 'utf8');
@@ -207,6 +257,21 @@ require.cache[authPath] = {
   test('CryptoRefills validation requires server-side Partner ID', () => {
     assert.ok(cryptoClientSource.includes('CRYPTOREFILLS_PARTNER_ID'));
     assert.ok(cryptoClientSource.includes("'X-Cr-Application'"));
+  });
+
+
+  const rewardsSql = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261107_gaindeep_rewards.sql'), 'utf8');
+  test('wheel uses one server-side random draw with a 24-hour cooldown', () => {
+    assert.match(rewardsSql, /v_roll := random\(\)/);
+    assert.match(rewardsSql, /interval '24 hours'/);
+    assert.match(rewardsSql, /for update/i);
+  });
+  test('plans are points-only and last 30 days', () => {
+    assert.match(rewardsSql, /2500/);
+    assert.match(rewardsSql, /7500/);
+    assert.match(rewardsSql, /15000/);
+    assert.match(rewardsSql, /interval '30 days'/);
+    assert.match(rewardsSql, /points_balance = points_balance - v_due/);
   });
 
   // Keep displayed and awarded points aligned; no AI auditor is implemented.
