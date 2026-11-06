@@ -11,17 +11,17 @@ final GlobalKey<NavigatorState> navKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthService.init();
-  runApp(const SatsKeeperApp());
+  runApp(const GainDeepApp());
 }
 
-class SatsKeeperApp extends StatelessWidget {
-  const SatsKeeperApp({super.key});
+class GainDeepApp extends StatelessWidget {
+  const GainDeepApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navKey,
-      title: 'SatsKeeper',
+      title: 'GainDeep',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
