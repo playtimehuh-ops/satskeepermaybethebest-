@@ -63,7 +63,7 @@ require.cache[authPath] = {
   const payout = require('../api/_lib/payout');
 
   // Country mapping and currency caps.
-  for (const [input, expected] of Object.entries({ US: 'US', UK: 'GB', GB: 'GB', EG: 'EG', SA: 'SA' }))
+  for (const [input, expected] of Object.entries({ US: 'US', UK: 'GB', GB: 'GB', EG: 'EG', SA: 'SA', AE: 'AE', JP: 'JP', ZA: 'ZA' }))
     test('country mapping ' + input, () => assert.strictEqual(bit.COUNTRY_MAP[input], expected));
   test('unknown country is not silently mapped', () => assert.strictEqual(bit.COUNTRY_MAP.ZZ, undefined));
   test('USD card cap', () => assert.strictEqual(config.maxCardValue('USD'), 10));
