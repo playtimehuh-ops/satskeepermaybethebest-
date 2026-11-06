@@ -8,7 +8,7 @@ class AppConfig {
   static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
   static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
 
-  static const String channelName = 'com.gaindeep/node';
+  static const String channelName = 'com.satskeeper/node';
   static const int reportIntervalSeconds = 60;
   static const int redeemCost = 5000;
   static const double pointsPerMb = 0.1;
