@@ -300,7 +300,11 @@ module.exports = wrap(async (req, res) => {
     bytes_used: measuredBytes,
     credited: false,
   });
-  if (logged.error) console.error('proxy_usage_log_failed', logged.error.message);
+  if (logged.error) {
+    // Fail closed: never deliver buyer traffic that cannot be accounted for.
+    console.error('proxy_usage_log_failed', logged.error.message);
+    return res.status(503).json({ error: 'usage_recording_unavailable', request_id: requestId });
+  }
 
   for (const [k, v] of Object.entries(outcome.headers).slice(0, 50)) {
     const name = String(k).toLowerCase();
