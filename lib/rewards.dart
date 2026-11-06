@@ -70,8 +70,9 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
       final index = prizes.indexOf(prize);
       final segment = index < 0 ? 0 : index;
       final anglePer = 2 * math.pi / prizes.length;
-      final target = (2 * math.pi * 5) + (2 * math.pi - (segment + 0.5) * anglePer);
-      await _wheelController.animateTo(1, curve: Curves.easeOutCubic);
+      final target = (2 * math.pi * 5) + math.pi / 2 - (segment + 0.5) * anglePer;
+      _spinDelta = target;
+      await _wheelController.forward(from: 0);
       if (mounted) {
         setState(() {
           _lastPrize = prize;
@@ -81,8 +82,8 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
         });
       }
       // Reset after the result is visible; the next spin starts from zero.
+      _wheelAngle += target;
       _wheelController.value = 0;
-      _wheelAngle = target;
     } on ApiException catch (e) {
       if (mounted) setState(() => _message = e.code == 'wheel_cooldown'
           ? 'Your next free spin is not ready yet.'
@@ -94,6 +95,7 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
   }
 
   double _wheelAngle = 0;
+  double _spinDelta = 0;
   bool get _canSpin => _data['wheel_available'] == true && !_busy;
   String get _activePlan => (_data['plan'] ?? 'free').toString();
 
@@ -133,8 +135,12 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
                 Center(child: SizedBox(
                   width: 284, height: 284,
                   child: Stack(alignment: Alignment.center, children: [
-                    Transform.rotate(
-                      angle: _wheelAngle,
+                    AnimatedBuilder(
+                      animation: _wheelController,
+                      builder: (context, child) => Transform.rotate(
+                        angle: _wheelAngle + (_spinDelta * _wheelController.value),
+                        child: child,
+                      ),
                       child: CustomPaint(size: const Size(280, 280), painter: _WheelPainter(c, prizes)),
                     ),
                     Positioned(top: 0, child: Icon(Icons.arrow_drop_down, size: 42, color: c.ink)),
