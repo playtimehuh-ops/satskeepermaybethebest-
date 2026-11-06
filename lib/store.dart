@@ -1,3 +1,17 @@
+String _countryLabel(String code) {
+  const names = <String, String>{
+    'AE': 'United Arab Emirates', 'AU': 'Australia', 'BR': 'Brazil',
+    'CA': 'Canada', 'CN': 'China', 'DE': 'Germany', 'EG': 'Egypt',
+    'ES': 'Spain', 'FR': 'France', 'GB': 'United Kingdom', 'IN': 'India',
+    'ID': 'Indonesia', 'IT': 'Italy', 'JP': 'Japan', 'KW': 'Kuwait',
+    'MX': 'Mexico', 'MY': 'Malaysia', 'NL': 'Netherlands', 'NZ': 'New Zealand',
+    'OM': 'Oman', 'PH': 'Philippines', 'PK': 'Pakistan', 'QA': 'Qatar',
+    'SA': 'Saudi Arabia', 'SG': 'Singapore', 'TH': 'Thailand',
+    'TR': 'Türkiye', 'US': 'United States', 'ZA': 'South Africa',
+  };
+  return '${names[code] ?? code} ($code)';
+}
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -31,7 +45,7 @@ class StoreScreen extends StatefulWidget {
 }
 
 class _StoreScreenState extends State<StoreScreen> {
-  int _countryIndex = 0;
+  int _countryIndex = AppConfig.countries.indexOf('SA') >= 0 ? AppConfig.countries.indexOf('SA') : 0;
   List<Product> _products = <Product>[];
   bool _loading = false;
   String? _error;
@@ -143,7 +157,7 @@ class _StoreScreenState extends State<StoreScreen> {
                       AppConfig.countries.length,
                       (i) => DropdownMenuItem<int>(
                         value: i,
-                        child: Text(AppConfig.countries[i]),
+                        child: Text(_countryLabel(AppConfig.countries[i])),
                       ),
                     ),
                     onChanged: (i) {
