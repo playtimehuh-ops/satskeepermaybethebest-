@@ -73,7 +73,7 @@ require.cache[authPath] = {
   test('currency matching is case insensitive', () => assert.strictEqual(config.maxCardValue('sar'), 40));
 
   // Catalog normalization and redemption selection validation.
-  const raw = { id: 'gift-1', name: 'Gift', currency: 'USD', packages: [
+  const raw = { id: 'gift-1', name: 'Gift', currency: 'SAR', packages: [
     { id: 'small', value: 5 }, { package_id: 'large', amount: 20 }, { id: 'bad', value: -1 },
   ] };
   const product = bit.normalizeProduct(raw);
