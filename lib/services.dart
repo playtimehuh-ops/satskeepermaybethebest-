@@ -209,6 +209,26 @@ class AuthService {
     return false;
   }
 
+  static Future<String> approvalStatus() async {
+    final token = await accessToken();
+    if (token == null) throw AuthException('Sign in again.');
+    final resp = await http.post(Uri.parse('${AppConfig.supabaseUrl}/rest/v1/rpc/gaindeep_approval_status'), headers: {
+      'Content-Type': 'application/json', 'apikey': AppConfig.supabaseAnonKey, 'Authorization': 'Bearer $token'
+    }, body: '{}').timeout(const Duration(seconds: 20));
+    if (resp.statusCode < 200 || resp.statusCode >= 300) throw AuthException('Could not check approval status (${resp.statusCode}).');
+    final data = jsonDecode(resp.body);
+    return data is Map ? '${data['status'] ?? 'pending'}' : 'pending';
+  }
+
+  static Future<void> redeemApprovalCode(String code) async {
+    final token = await accessToken();
+    if (token == null) throw AuthException('Sign in again.');
+    final resp = await http.post(Uri.parse('${AppConfig.supabaseUrl}/rest/v1/rpc/gaindeep_redeem_approval_code'), headers: {
+      'Content-Type': 'application/json', 'apikey': AppConfig.supabaseAnonKey, 'Authorization': 'Bearer $token'
+    }, body: jsonEncode({'p_code': code.trim()})).timeout(const Duration(seconds: 20));
+    if (resp.statusCode < 200 || resp.statusCode >= 300) throw AuthException('That code is invalid or your request is not ready yet.');
+  }
+
   static Future<void> signIn(String email, String password) async {
     final j = await _post('/token?grant_type=password', {'email': email, 'password': password});
     await _store(j);
