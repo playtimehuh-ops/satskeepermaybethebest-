@@ -572,6 +572,14 @@ class Api {
     return map;
   }
 
+  static Future<Map<String, dynamic>> rewards() => _send('GET', '/api/rewards');
+
+  static Future<Map<String, dynamic>> purchasePlan(String plan) =>
+      _send('POST', '/api/rewards', body: {'action': 'purchase_plan', 'plan': plan});
+
+  static Future<Map<String, dynamic>> spinWheel() =>
+      _send('POST', '/api/rewards', body: {'action': 'spin'});
+
   static Future<Map<String, dynamic>> consent(bool optedIn) =>
       _send('POST', '/api/consent', body: {'opted_in': optedIn});
 
