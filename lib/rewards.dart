@@ -70,7 +70,8 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
       final index = prizes.indexOf(prize);
       final segment = index < 0 ? 0 : index;
       final anglePer = 2 * math.pi / prizes.length;
-      final target = (2 * math.pi * 5) - (segment + 0.5) * anglePer;
+      final desired = -(segment + 0.5) * anglePer;
+      final target = (2 * math.pi * 5) + ((desired - _wheelAngle) % (2 * math.pi) + 2 * math.pi) % (2 * math.pi);
       _spinDelta = target;
       await _wheelController.forward(from: 0);
       if (mounted) {
@@ -123,8 +124,8 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
                 Text('Current plan: ${_activePlan.toUpperCase()}${_data['expires_at'] == null ? '' : ' · until ${_date(_data['expires_at'])}'}', style: T.body(c)),
                 const SizedBox(height: 18),
                 _planCard(c, 'Plus', 2500, '30-day activity history', 'plus'),
-                _planCard(c, 'Pro', 7500, '90-day activity history and streak insights', 'pro'),
-                _planCard(c, 'Elite', 15000, '365-day activity history and Elite badge', 'elite'),
+                _planCard(c, 'Pro', 7500, '90-day activity history', 'pro'),
+                _planCard(c, 'Elite', 15000, '365-day activity history', 'elite'),
                 const SizedBox(height: 30),
                 Divider(color: c.rule),
                 const SizedBox(height: 16),
@@ -175,7 +176,9 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
     final currentRank = rank[_activePlan] ?? 0;
     final thisRank = rank[id] ?? 0;
     final disabled = _busy || active || currentRank > thisRank;
-    final label = active ? 'Current plan' : currentRank > thisRank ? 'Higher plan active' : 'Unlock · $cost points';
+    final currentCost = const {'free': 0, 'plus': 2500, 'pro': 7500, 'elite': 15000}[_activePlan] ?? 0;
+    final due = cost - (currentRank < thisRank ? currentCost : 0);
+    final label = active ? 'Current plan' : currentRank > thisRank ? 'Higher plan active' : '${currentRank == 0 ? 'Unlock' : 'Upgrade'} · $due points';
     return Container(
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(16),
