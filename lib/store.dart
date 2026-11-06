@@ -123,11 +123,31 @@ class _StoreScreenState extends State<StoreScreen> {
                     style: T.small(c).copyWith(fontSize: 15),
                   ),
                   const SizedBox(height: 24),
-                  TextTabs(
-                    labels: AppConfig.countries,
-                    index: _countryIndex,
+                  DropdownButtonFormField<int>(
+                    value: _countryIndex,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Country / region',
+                      filled: true,
+                      fillColor: c.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: c.rule),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: c.rule),
+                      ),
+                    ),
+                    items: List<DropdownMenuItem<int>>.generate(
+                      AppConfig.countries.length,
+                      (i) => DropdownMenuItem<int>(
+                        value: i,
+                        child: Text(AppConfig.countries[i]),
+                      ),
+                    ),
                     onChanged: (i) {
-                      if (i == _countryIndex) return;
+                      if (i == null || i == _countryIndex) return;
                       setState(() {
                         _countryIndex = i;
                         _products = <Product>[];
