@@ -49,12 +49,16 @@ function safeEqual(a, b) {
 }
 
 // Buyers authenticate with x-api-key. PROXY_API_KEYS = comma separated list of keys (24+ chars each).
-function buyerAllowed(req) {
-  const keys = String(process.env.PROXY_API_KEYS || '')
+function configuredBuyerKeys() {
+  const raw = process.env.PROXY_API_KEYS || process.env.PROXY_API_KEY || '';
+  return String(raw)
     .split(',')
-    .map((k) => k.trim())
+    .map((k) => k.trim().replace(/^["']|["']$/g, ''))
     .filter((k) => k.length >= 24);
-  const given = String(req.headers['x-api-key'] || '');
+}
+
+function buyerAllowed(req, keys = configuredBuyerKeys()) {
+  const given = String(req.headers['x-api-key'] || '').trim();
   let ok = false;
   for (const k of keys) {
     if (safeEqual(given, k)) ok = true; // no early exit
@@ -231,7 +235,12 @@ async function closeClient(client) {
 
 module.exports = wrap(async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
-  if (!buyerAllowed(req)) return res.status(401).json({ error: 'unauthorized' });
+  const buyerKeys = configuredBuyerKeys();
+  if (buyerKeys.length === 0) {
+    console.error('proxy_gateway_key_not_configured');
+    return res.status(503).json({ error: 'gateway_not_configured' });
+  }
+  if (!buyerAllowed(req, buyerKeys)) return res.status(401).json({ error: 'unauthorized' });
 
   const deadline = Date.now() + TIMEOUT_MS;
   const b = bodyOf(req);
