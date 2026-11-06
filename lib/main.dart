@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'auth_screen.dart';
+import 'approval_screen.dart';
 import 'home.dart';
 import 'services.dart';
 import 'theme.dart';
@@ -11,17 +12,17 @@ final GlobalKey<NavigatorState> navKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthService.init();
-  runApp(const SatsKeeperApp());
+  runApp(const GainDeepApp());
 }
 
-class SatsKeeperApp extends StatelessWidget {
-  const SatsKeeperApp({super.key});
+class GainDeepApp extends StatelessWidget {
+  const GainDeepApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navKey,
-      title: 'SatsKeeper',
+      title: 'GainDeep',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
@@ -61,7 +62,14 @@ class Gate extends StatelessWidget {
           });
           return const AuthScreen();
         }
-        return SignedInFlow(key: ValueKey<String>(session.userId), session: session);
+        return FutureBuilder<String>(
+          future: AuthService.approvalStatus(),
+          builder: (context, approval) {
+            if (approval.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            if (approval.hasError || approval.data != 'approved') return const ApprovalScreen();
+            return SignedInFlow(key: ValueKey<String>(session.userId), session: session);
+          },
+        );
       },
     );
   }

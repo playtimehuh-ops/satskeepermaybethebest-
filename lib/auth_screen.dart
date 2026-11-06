@@ -15,6 +15,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   int _mode = 0; // 0 = log in, 1 = create account
   final TextEditingController _email = TextEditingController();
+  final TextEditingController _confirmEmail = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _confirm = TextEditingController();
   bool _showPassword = false;
@@ -28,6 +29,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void dispose() {
     _email.dispose();
+    _confirmEmail.dispose();
     _password.dispose();
     _confirm.dispose();
     super.dispose();
@@ -56,6 +58,7 @@ class _AuthScreenState extends State<AuthScreen> {
     String? passwordError;
     String? confirmError;
     if (!_emailPattern.hasMatch(email)) emailError = 'Enter a valid email address.';
+    if (_mode == 1 && _confirmEmail.text.trim().toLowerCase() != email.toLowerCase()) emailError = 'The email addresses do not match.';
     if (password.isEmpty) {
       passwordError = 'Enter your password.';
     } else if (_mode == 1 && password.length < 8) {
@@ -92,7 +95,7 @@ class _AuthScreenState extends State<AuthScreen> {
           setState(() {
             _mode = 0;
             _confirm.clear();
-            _info = 'Account created. Confirm your email, then log in.';
+            _info = 'Application received. Approval usually takes 1–48 hours. Log in to check your status.';
           });
         }
       }
@@ -143,7 +146,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   children: [
                     const SizedBox(height: 56),
                     Text(
-                      'SatsKeeper',
+                      'GainDeep',
                       style: T.title(c).copyWith(fontSize: 40, letterSpacing: -1.4),
                     ),
                     const SizedBox(height: 10),
@@ -169,6 +172,10 @@ class _AuthScreenState extends State<AuthScreen> {
                       autofillHints: const [AutofillHints.email],
                       error: _emailError,
                     ),
+                    if (signup) ...[
+                      const SizedBox(height: 16),
+                      FieldLine(label: 'Confirm email', controller: _confirmEmail, keyboardType: TextInputType.emailAddress, action: TextInputAction.next, autofillHints: const [AutofillHints.email]),
+                    ],
                     const SizedBox(height: 22),
                     FieldLine(
                       label: 'Password',

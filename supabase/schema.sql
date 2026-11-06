@@ -1,4 +1,4 @@
--- SatsKeeper schema. Idempotent: safe to run again on top of an older version.
+-- GainDeep schema. Idempotent: safe to run again on top of an older version.
 -- Run it in the Supabase SQL editor. All money logic lives in the functions below
 -- so it is atomic (row locks) and cannot be raced from the API layer.
 
@@ -639,3 +639,68 @@ do $$ begin
   execute $p$ create policy proxy_gateway_all on realtime.messages for all to service_role using (true) with check (true) $p$;
 end $$;
 notify pgrst, 'reload schema';
+
+
+-- GainDeep manual approval (run this migration in Supabase SQL Editor).
+create extension if not exists pgcrypto with schema extensions;
+create table if not exists public.gaindeep_approvals (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  admin_code text,
+  code_hash text,
+  created_at timestamptz not null default now(),
+  approved_at timestamptz,
+  token_balance bigint not null default 0
+);
+alter table public.gaindeep_approvals enable row level security;
+revoke all on public.gaindeep_approvals from public, anon, authenticated;
+grant all on public.gaindeep_approvals to service_role;
+
+create or replace function public.gaindeep_new_registration()
+returns trigger language plpgsql security definer set search_path=public,extensions,pg_temp as $$
+declare v_code text;
+begin
+  v_code := lpad((floor(random()*100000000)::bigint)::text,8,'0');
+  insert into public.gaindeep_approvals(user_id,email,status,admin_code,code_hash)
+  values(new.id,lower(new.email),'pending',v_code,encode(extensions.digest(v_code,'sha256'),'hex'))
+  on conflict(user_id) do nothing;
+  return new;
+end $$;
+drop trigger if exists gaindeep_auth_user_created on auth.users;
+create trigger gaindeep_auth_user_created after insert on auth.users
+for each row execute function public.gaindeep_new_registration();
+
+create or replace function public.gaindeep_approval_status()
+returns jsonb language sql security definer set search_path=public,pg_temp as $$
+  select jsonb_build_object('status',coalesce((select status from public.gaindeep_approvals where user_id=auth.uid()),'pending'));
+$$;
+revoke all on function public.gaindeep_approval_status() from public,anon;
+grant execute on function public.gaindeep_approval_status() to authenticated;
+
+create or replace function public.gaindeep_redeem_approval_code(p_code text)
+returns jsonb language plpgsql security definer set search_path=public,extensions,pg_temp as $$
+declare v_row public.gaindeep_approvals%rowtype;
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  select * into v_row from public.gaindeep_approvals where user_id=auth.uid() for update;
+  if not found then raise exception 'approval_record_missing'; end if;
+  if v_row.status='approved' then return jsonb_build_object('status','approved'); end if;
+  if v_row.status='rejected' then raise exception 'application_rejected'; end if;
+  if p_code is null or length(trim(p_code))<>8 or v_row.code_hash is null
+     or encode(extensions.digest(trim(p_code),'sha256'),'hex')<>v_row.code_hash then
+    raise exception 'invalid_approval_code';
+  end if;
+  update public.gaindeep_approvals set status='approved',approved_at=now(),admin_code=null,code_hash=null
+    where user_id=auth.uid();
+  return jsonb_build_object('status','approved');
+end $$;
+revoke all on function public.gaindeep_redeem_approval_code(text) from public,anon;
+grant execute on function public.gaindeep_redeem_approval_code(text) to authenticated;
+
+-- Admin workflow in Supabase SQL Editor (service-role dashboard access):
+-- select user_id,email,status,admin_code,created_at from public.gaindeep_approvals order by created_at;
+-- approve manually: update public.gaindeep_approvals set status='approved',approved_at=now(),admin_code=null,code_hash=null where user_id='USER_UUID';
+-- To issue/re-issue an 8-digit code: update public.gaindeep_approvals set status='pending',admin_code=lpad((floor(random()*100000000)::bigint)::text,8,'0'),code_hash=null where user_id='USER_UUID';
+-- Then set the hash using the code you generated, e.g. replace CODE below:
+-- update public.gaindeep_approvals set code_hash=encode(extensions.digest('CODE','sha256'),'hex') where user_id='USER_UUID';
