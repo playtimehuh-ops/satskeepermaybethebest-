@@ -131,7 +131,7 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
                 const SizedBox(height: 16),
                 Text('Daily points wheel', style: T.heading(c)),
                 const SizedBox(height: 5),
-                Text('One free spin every 24 hours. Prizes are selected and credited by the server.', style: T.small(c)),
+                Text('One free spin every 24 hours. Server-selected odds: 0 points 10% · 5 points 30% · 10 points 30% · 15 points 20% · 25 points 8% · 50 points 2%.', style: T.small(c)),
                 const SizedBox(height: 22),
                 Center(child: SizedBox(
                   width: 284, height: 284,
