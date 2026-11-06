@@ -104,7 +104,11 @@ function normalizePackage(p) {
 // Returns a trimmed product limited to what a redemption may actually buy.
 function normalizeProduct(p) {
   if (!p || !p.id || p.in_stock === false) return null;
-  // Catalog browsing is not a purchase. Keep valid provider denominations visible;\n  // the manual redemption request applies its own hard amount ceiling.\n  const cap = 10000;
+  // Apply the configured per-currency ceiling so the store never advertises
+  // denominations the current redemption policy cannot accept.
+  const cap = config.hasCardValueCap(p.currency)
+    ? config.maxCardValue(p.currency)
+    : 10000;
 
   const packages = (Array.isArray(p.packages) ? p.packages : [])
     .map(normalizePackage)
