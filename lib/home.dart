@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'config.dart';
 import 'services.dart';
 import 'store.dart';
+import 'rewards.dart';
 import 'theme.dart';
 
 /// Stops sharing, tells the server, clears local flags and logs out.
@@ -428,6 +429,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text('App network megabytes reported per minute, newest on the right.', style: T.small(c)),
                     const SizedBox(height: 14),
                     ThroughputBars(values: List<double>.of(_history)),
+                    const SizedBox(height: 20),
+                    Material(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () async {
+                          await Navigator.of(context).push(fadeRoute<void>(const RewardsScreen()));
+                          await _refreshLedger();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(color: c.punch, borderRadius: BorderRadius.circular(12)),
+                                child: Icon(Icons.casino_outlined, color: c.ink),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Rewards & plans', style: T.strong(c)),
+                                    Text('Daily points wheel · memberships', style: T.small(c)),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios, size: 16, color: c.muted),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 28),
                     Divider(height: 1, color: c.rule),
                     _InfoRow('Streak', '$_streak ${_streak == 1 ? 'day' : 'days'}'),
