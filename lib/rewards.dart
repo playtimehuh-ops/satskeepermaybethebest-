@@ -70,7 +70,7 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
       final index = prizes.indexOf(prize);
       final segment = index < 0 ? 0 : index;
       final anglePer = 2 * math.pi / prizes.length;
-      final target = (2 * math.pi * 5) + math.pi / 2 - (segment + 0.5) * anglePer;
+      final target = (2 * math.pi * 5) - (segment + 0.5) * anglePer;
       _spinDelta = target;
       await _wheelController.forward(from: 0);
       if (mounted) {
