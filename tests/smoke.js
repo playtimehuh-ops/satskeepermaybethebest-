@@ -32,12 +32,17 @@ const supabasePath = require.resolve('../api/_lib/supabase');
 const authPath = require.resolve('../api/_lib/auth');
 const rpcCalls = [];
 const supabase = {
-  auth: { getUser: async () => ({ data: { user: { id: 'test-device-123', email_confirmed_at: '2026-01-01' } }, error: null }) },
+  auth: {
+    getUser: async () => ({ data: { user: { id: 'test-device-123', email_confirmed_at: '2026-01-01' } }, error: null }),
+    admin: { getUserById: async () => ({ data: { user: { email: 'account@example.com' } }, error: null }) },
+  },
   rpc: async (name, args) => { rpcCalls.push({ name, args }); if (name === 'reserve_redemption') return { data: { status: 'ok', id: 77 }, error: null }; if (name === 'refund_redemption') return { data: true, error: null }; return { data: null, error: null }; },
   from: () => ({
     upsert: async () => ({ error: null }),
-    select() { return this; }, eq() { return this; }, not() { return this; },
-    lt() { return this; }, order() { return this; }, limit: async () => ({ data: [], error: null }),
+    select() { return this; }, update() { return this; }, eq() { return this; }, not() { return this; },
+    lt() { return this; }, order() { return this; },
+    single: async () => ({ data: { id: 77, points_spent: 5000, beneficiary_email: 'buyer@example.com', product_name: 'Gift', reward_amount: 5, reward_currency: 'USD', created_at: '2026-01-01T00:00:00Z' }, error: null }),
+    limit: async () => ({ data: [], error: null }),
   }),
 };
 require.cache[supabasePath] = { id: supabasePath, filename: supabasePath, loaded: true, exports: supabase };
@@ -168,31 +173,25 @@ require.cache[authPath] = {
     assert.strictEqual(r.statusCode, 400);
   });
 
-  test('Cryptorefills redemption uses the fixed USD points conversion', () => {
+  test('redemption is manual and does not call a payment provider', () => {
     const redeemSource = fs.readFileSync(path.join(__dirname, '../api/redeem.js'), 'utf8');
-    assert.ok(redeemSource.includes('const POINTS_PER_USD = 10000;'));
-    assert.ok(redeemSource.includes('CRYPTOREFILLS_MOCK_MODE'));
-    assert.ok(redeemSource.includes("await refund(reserved.id, 'cryptorefills_mock_dry_run')"));
+    assert.ok(redeemSource.includes('manual_payout: true'));
+    assert.ok(redeemSource.includes("status: 'pending'"));
+    assert.doesNotMatch(redeemSource, /createOrder|sendPayment|CRYPTOREFILLS_MOCK_MODE/);
   });
 
-  await testAsync('Cryptorefills dry-run reserves and refunds the USD point amount', async () => {
-    process.env.CRYPTOREFILLS_MOCK_MODE = 'true';
+  await testAsync('valid redemption reserves 5000 points and creates a pending manual request', async () => {
     rpcCalls.length = 0;
-    const r = await invoke(redeem, { body: { product_id: 'amazon-us-10', country_code: 'US', amount: 5 } });
+    const r = await invoke(redeem, { body: {
+      product_id: 'gift-1', product_name: 'Gift', currency: 'USD',
+      beneficiary_email: 'buyer@example.com', value: 5,
+    }});
     assert.strictEqual(r.statusCode, 200);
-    assert.strictEqual(r.body.points_required, 50000);
-    assert.strictEqual(r.body.points_refunded, true);
-    assert.strictEqual(r.body.code, null);
-    assert.deepStrictEqual(rpcCalls.map(x => x.name), ['reserve_redemption', 'refund_redemption']);
-    assert.strictEqual(rpcCalls[0].args.p_points, 50000);
-    delete process.env.CRYPTOREFILLS_MOCK_MODE;
-  });
-
-  await testAsync('Cryptorefills refuses live payments when the signer is not configured', async () => {
-    delete process.env.CRYPTOREFILLS_MOCK_MODE;
-    const r = await invoke(redeem, { body: { product_id: 'amazon-us-10', country_code: 'US', amount: 5 } });
-    assert.strictEqual(r.statusCode, 503);
-    assert.strictEqual(r.body.error, 'payment_adapter_not_configured');
+    assert.strictEqual(r.body.manual_payout, true);
+    assert.strictEqual(r.body.status, 'pending');
+    assert.strictEqual(r.body.points_spent, 5000);
+    assert.deepStrictEqual(rpcCalls.map(x => x.name), ['reserve_redemption']);
+    assert.strictEqual(rpcCalls[0].args.p_points, 5000);
   });
 
   // CryptoRefills validation-only path must never create orders or reserve points.
@@ -215,7 +214,7 @@ require.cache[authPath] = {
   const homeSource = fs.readFileSync(path.join(__dirname, '../lib/home.dart'), 'utf8');
   const appConfigSource = fs.readFileSync(path.join(__dirname, '../lib/config.dart'), 'utf8');
   test('bandwidth reward rate comes from backend config', () => assert.ok(verifySource.includes('const POINTS_PER_MB = config.points_per_mb;')));
-  test('client reward rate matches backend config', () => assert.ok(appConfigSource.includes('static const double pointsPerMb = 0.1;')));
+  test('client reward rate matches backend config', () => assert.ok(appConfigSource.includes('static const double pointsPerMb = 2.0;')));
   test('consent screen does not claim an AI audit', () => assert.doesNotMatch(homeSource, /AI audit|AI auditor/i));
   test('client explains that UID traffic is not Mysterium-only', () => assert.match(homeSource, /does not independently verify Mysterium-only traffic/i));
 
