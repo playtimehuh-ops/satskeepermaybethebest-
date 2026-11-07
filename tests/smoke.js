@@ -185,7 +185,7 @@ require.cache[authPath] = {
   await testAsync('valid redemption reserves 5000 points and creates a pending manual request', async () => {
     rpcCalls.length = 0;
     const r = await invoke(redeem, { body: {
-      product_id: 'gift-1', product_name: 'Gift', currency: 'USD',
+      product_id: 'manual_roblox_US', product_name: 'Roblox Gift Card', currency: 'USD',
       beneficiary_email: 'buyer@example.com', value: 5,
     }});
     assert.strictEqual(r.statusCode, 200);
@@ -281,7 +281,7 @@ require.cache[authPath] = {
   test('bandwidth reward rate comes from backend config', () => assert.ok(verifySource.includes('const POINTS_PER_MB = config.points_per_mb;')));
   test('client reward rate matches backend config', () => assert.ok(appConfigSource.includes('static const double pointsPerMb = 2.0;')));
   test('consent screen does not claim an AI audit', () => assert.doesNotMatch(homeSource, /AI audit|AI auditor/i));
-  test('client explains that UID traffic is not Mysterium-only', () => assert.match(homeSource, /does not independently verify Mysterium-only traffic/i));
+  test('client explains that reported traffic is not independently provider-verified', () => assert.match(homeSource, /does not independently verify that every byte came from that service/i));
 
   test('client-supplied bandwidth measurements cannot earn points', () => assert.ok(verifySource.includes("untrusted_measurement_source")));
   test('gateway logs server-measured proxy bytes for idempotent crediting', () => { const gateway = fs.readFileSync(path.join(__dirname, '../api/proxy-gateway.js'), 'utf8'); const proxySql = fs.readFileSync(path.join(__dirname, '../supabase/proxy-schema.sql'), 'utf8'); assert.ok(gateway.includes("from('proxy_logs').insert")); assert.ok(gateway.includes('bytes_used: measuredBytes')); assert.ok(proxySql.includes('credit_proxy_log')); assert.ok(proxySql.includes('credited boolean not null default false')); });
