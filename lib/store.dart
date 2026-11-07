@@ -19,6 +19,49 @@ String _countryLabel(String code) {
   return '${names[code] ?? code} ($code)';
 }
 
+
+String _currencyForCountry(String code) {
+  const currencies = <String, String>{
+    'SA':'SAR','AE':'AED','EG':'EGP','GB':'GBP','US':'USD','CA':'CAD',
+    'AU':'AUD','NZ':'NZD','IN':'INR','PK':'PKR','BD':'BDT','PH':'PHP',
+    'ID':'IDR','MY':'MYR','SG':'SGD','TH':'THB','JP':'JPY','KR':'KRW',
+    'CN':'CNY','HK':'HKD','TW':'TWD','TR':'TRY','KW':'KWD','QA':'QAR',
+    'BH':'BHD','OM':'OMR','JO':'JOD','BR':'BRL','MX':'MXN','ZA':'ZAR',
+    'CH':'CHF','DE':'EUR','FR':'EUR','ES':'EUR','IT':'EUR','NL':'EUR',
+    'BE':'EUR','AT':'EUR','IE':'EUR','PT':'EUR','FI':'EUR','GR':'EUR',
+  };
+  return currencies[code] ?? 'USD';
+}
+
+List<Product> _manualProductsForCountry(String country) {
+  final currency = _currencyForCountry(country);
+  final amounts = switch (currency) {
+    'SAR' || 'AED' || 'QAR' || 'OMR' || 'KWD' || 'BHD' => [20.0, 50.0, 100.0],
+    'EGP' || 'INR' => [100.0, 250.0, 500.0],
+    'JPY' || 'KRW' || 'IDR' => [1000.0, 3000.0, 5000.0],
+    'GBP' || 'EUR' || 'USD' || 'CAD' || 'AUD' || 'NZD' || 'CHF' => [5.0, 10.0, 25.0],
+    _ => [10.0, 25.0, 50.0],
+  };
+  const brands = <String>[
+    'Roblox Gift Card', 'Steam Wallet', 'PlayStation Store',
+    'Xbox Gift Card', 'Google Play', 'Apple Gift Card',
+  ];
+  const ids = <String>['roblox','steam','playstation','xbox','google_play','apple'];
+  return [
+    for (var i = 0; i < brands.length; i++)
+      Product(
+        id: 'manual_${ids[i]}_$country',
+        name: brands[i],
+        image: null,
+        currency: currency,
+        packages: [for (final value in amounts) Pkg(value.toStringAsFixed(0), value)],
+        min: null,
+        max: null,
+        step: null,
+      ),
+  ];
+}
+
 String fmtAmount(double v) => v == v.roundToDouble() ? fmtNum(v) : v.toStringAsFixed(2);
 
 String describeAmounts(Product p) {
@@ -51,7 +94,6 @@ class _StoreScreenState extends State<StoreScreen> {
   String? _error;
   late double _points = widget.points;
   final TextEditingController _search = TextEditingController();
-  int _loadToken = 0;
 
   @override
   void initState() {
@@ -65,26 +107,12 @@ class _StoreScreenState extends State<StoreScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    final token = ++_loadToken;
+  void _load() {
     setState(() {
-      _loading = true;
+      _loading = false;
       _error = null;
+      _products = _manualProductsForCountry(AppConfig.countries[_countryIndex]);
     });
-    try {
-      final list = await Api.catalog(AppConfig.countries[_countryIndex]);
-      if (!mounted || token != _loadToken) return;
-      setState(() => _products = list);
-    } on ApiException catch (e) {
-      if (mounted && token == _loadToken) {
-        setState(() {
-          _products = <Product>[];
-          _error = e.message;
-        });
-      }
-    } finally {
-      if (mounted && token == _loadToken) setState(() => _loading = false);
-    }
   }
 
   Future<void> _refreshPoints() async {
@@ -164,11 +192,12 @@ class _StoreScreenState extends State<StoreScreen> {
                       if (i == null || i == _countryIndex) return;
                       setState(() {
                         _countryIndex = i;
-                        _products = <Product>[];
+                        _products = _manualProductsForCountry(AppConfig.countries[i]);
                       });
-                      _load();
                     },
                   ),
+                  const SizedBox(height: 8),
+                  Text('Items are listed by GainDeep. Requests are reviewed manually; regional fulfilment is confirmed after submission.', style: T.small(c)),
                   const SizedBox(height: 16),
                   FieldLine(
                     label: 'Search',
@@ -199,7 +228,7 @@ class _StoreScreenState extends State<StoreScreen> {
             children: [
               Message(_error!),
               const SizedBox(height: 8),
-              LinkButton(label: 'Try again', onPressed: _load),
+              LinkButton(label: 'Back to items', onPressed: _load),
             ],
           ),
         ),
@@ -213,7 +242,7 @@ class _StoreScreenState extends State<StoreScreen> {
           padding: const EdgeInsets.all(24),
           child: Text(
             q.isEmpty
-                ? 'No cards are available in ${AppConfig.countries[_countryIndex]} right now. Try another country.'
+                ? 'No items match this country. Try another country.'
                 : 'No brand matches "$q".',
             textAlign: TextAlign.center,
             style: T.small(c).copyWith(fontSize: 15),
