@@ -10,10 +10,10 @@ const COUNTRY_CURRENCY = { SA:'SAR', AE:'AED', EG:'EGP', GB:'GBP', US:'USD', CA:
 function isManualItem(productId, productName, currency, amount) {
   const match = /^manual_(roblox|steam|playstation|xbox|google_play|apple)_([A-Z]{2})$/.exec(String(productId || ''));
   if (!match || MANUAL_BRANDS[match[1]] !== productName || (COUNTRY_CURRENCY[match[2]] || 'USD') !== currency) return false;
-  const values = ['SAR','AED','QAR','OMR','KWD','BHD'].includes(currency) ? [20,50,100]
-    : ['EGP','INR'].includes(currency) ? [100,250,500]
-    : ['JPY','KRW','IDR'].includes(currency) ? [1000,3000,5000]
-    : ['GBP','EUR','USD','CAD','AUD','NZD','CHF'].includes(currency) ? [5,10,25] : [10,25,50];
+  const values = currency === 'SAR' || currency === 'AED' ? [10,20,40]
+    : currency === 'EGP' ? [100,250,500]
+    : currency === 'GBP' ? [2,5,8]
+    : currency === 'EUR' ? [2,5,9] : [2,5,10];
   return values.includes(amount);
 }
 
@@ -74,7 +74,7 @@ module.exports = wrap(async (req, res) => {
   const reward_amount = Number(body.value);
   if (!PRODUCT_ID.test(String(product_id || '')) || !product_name || product_name.length > 128 ||
       !EMAIL.test(beneficiary_email) || beneficiary_email.length > 254 ||
-      !Number.isFinite(reward_amount) || reward_amount <= 0 ||
+      !Number.isFinite(reward_amount) || reward_amount <= 0 ||\n      reward_amount > (config.hasCardValueCap(reward_currency) ? config.maxCardValue(reward_currency) : 10) ||
       !/^[A-Z]{3,12}$/.test(reward_currency) ||
       !isManualItem(product_id, product_name, reward_currency, reward_amount)) {
     return res.status(400).json({ error: 'bad_request' });
