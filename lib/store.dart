@@ -36,11 +36,11 @@ String _currencyForCountry(String code) {
 List<Product> _manualProductsForCountry(String country) {
   final currency = _currencyForCountry(country);
   final amounts = switch (currency) {
-    'SAR' || 'AED' || 'QAR' || 'OMR' || 'KWD' || 'BHD' => [20.0, 50.0, 100.0],
-    'EGP' || 'INR' => [100.0, 250.0, 500.0],
-    'JPY' || 'KRW' || 'IDR' => [1000.0, 3000.0, 5000.0],
-    'GBP' || 'EUR' || 'USD' || 'CAD' || 'AUD' || 'NZD' || 'CHF' => [5.0, 10.0, 25.0],
-    _ => [10.0, 25.0, 50.0],
+    'SAR' || 'AED' => [10.0, 20.0, 40.0],
+    'EGP' => [100.0, 250.0, 500.0],
+    'GBP' => [2.0, 5.0, 8.0],
+    'EUR' => [2.0, 5.0, 9.0],
+    _ => [2.0, 5.0, 10.0],
   };
   const brands = <String>[
     'Roblox Gift Card', 'Steam Wallet', 'PlayStation Store',
