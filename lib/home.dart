@@ -100,13 +100,13 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     Text('Before you start sharing', style: T.title(c)),
                     const SizedBox(height: 12),
                     Text(
-                      'GainDeep runs a Mysterium node on your phone. Here is what that means.',
+                      'GainDeep can share your phone's network connection. Here is what that means.',
                       style: T.body(c).copyWith(color: c.muted),
                     ),
                     const SizedBox(height: 32),
                     const _Fact(
                       'It runs in the background.',
-                      'A foreground service keeps the node alive and shows a notification while it works.',
+                      'A background sharing service stays active and shows a notification while it works.',
                     ),
                     const _Fact(
                       'Other people\'s traffic uses your connection.',
@@ -352,7 +352,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String get _status {
     if (_node['error'] != null) {
       final detail = _node['error'].toString().trim();
-      return detail.isEmpty ? 'Error' : 'Error: ${detail.length > 34 ? '${detail.substring(0, 34)}…' : detail}';
+      return 'Sharing needs attention';
     }
     if (_node['running'] == true) return 'Sharing';
     if (_node['starting'] == true) return 'Starting';
@@ -720,7 +720,7 @@ class _AccountScreenState extends State<AccountScreen> {
       try {
         await NodeChannel.stop();
       } catch (e) {
-        syncWarning = 'Local stop reported an error: $e';
+        syncWarning = 'The sharing service could not confirm it stopped. Check the notification and try again.';
       }
       try {
         await Api.consent(false);
@@ -757,10 +757,10 @@ class _AccountScreenState extends State<AccountScreen> {
                   const SizedBox(height: 2),
                   Text(widget.email, style: T.heading(c), overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 32),
-                  Text('Sharing is on', style: T.strong(c)),
+                  Text('Network sharing is on', style: T.strong(c)),
                   const SizedBox(height: 4),
                   Text(
-                    'Pausing stops the node and the notification. Your points stay in your account.',
+                    'Pausing stops network sharing and its notification. Your points stay in your account.',
                     style: T.small(c).copyWith(fontSize: 15),
                   ),
                   const SizedBox(height: 16),
