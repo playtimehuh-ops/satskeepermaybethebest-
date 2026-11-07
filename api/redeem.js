@@ -5,6 +5,18 @@ const config = require('./_lib/config');
 
 const PRODUCT_ID = /^[A-Za-z0-9._-]{1,128}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MANUAL_BRANDS = { roblox: 'Roblox Gift Card', steam: 'Steam Wallet', playstation: 'PlayStation Store', xbox: 'Xbox Gift Card', google_play: 'Google Play', apple: 'Apple Gift Card' };
+const COUNTRY_CURRENCY = { SA:'SAR', AE:'AED', EG:'EGP', GB:'GBP', US:'USD', CA:'CAD', AU:'AUD', NZ:'NZD', IN:'INR', PK:'PKR', BD:'BDT', PH:'PHP', ID:'IDR', MY:'MYR', SG:'SGD', TH:'THB', JP:'JPY', KR:'KRW', CN:'CNY', HK:'HKD', TW:'TWD', TR:'TRY', KW:'KWD', QA:'QAR', BH:'BHD', OM:'OMR', JO:'JOD', BR:'BRL', MX:'MXN', ZA:'ZAR', CH:'CHF', DE:'EUR', FR:'EUR', ES:'EUR', IT:'EUR', NL:'EUR', BE:'EUR', AT:'EUR', IE:'EUR', PT:'EUR', FI:'EUR', GR:'EUR' };
+function isManualItem(productId, productName, currency, amount) {
+  const match = /^manual_(roblox|steam|playstation|xbox|google_play|apple)_([A-Z]{2})$/.exec(String(productId || ''));
+  if (!match || MANUAL_BRANDS[match[1]] !== productName || (COUNTRY_CURRENCY[match[2]] || 'USD') !== currency) return false;
+  const values = ['SAR','AED','QAR','OMR','KWD','BHD'].includes(currency) ? [20,50,100]
+    : ['EGP','INR'].includes(currency) ? [100,250,500]
+    : ['JPY','KRW','IDR'].includes(currency) ? [1000,3000,5000]
+    : ['GBP','EUR','USD','CAD','AUD','NZD','CHF'].includes(currency) ? [5,10,25] : [10,25,50];
+  return values.includes(amount);
+}
+
 
 async function sendAdminNotice(redemption, accountEmail) {
   const to = process.env.REDEMPTION_NOTIFY_EMAIL || 'playtimehuh@gmail.com';
@@ -62,8 +74,9 @@ module.exports = wrap(async (req, res) => {
   const reward_amount = Number(body.value);
   if (!PRODUCT_ID.test(String(product_id || '')) || !product_name || product_name.length > 128 ||
       !EMAIL.test(beneficiary_email) || beneficiary_email.length > 254 ||
-      !Number.isFinite(reward_amount) || reward_amount <= 0 || reward_amount > 10000 ||
-      !/^[A-Z]{3,12}$/.test(reward_currency)) {
+      !Number.isFinite(reward_amount) || reward_amount <= 0 ||
+      !/^[A-Z]{3,12}$/.test(reward_currency) ||
+      !isManualItem(product_id, product_name, reward_currency, reward_amount)) {
     return res.status(400).json({ error: 'bad_request' });
   }
   const { data: userResult, error: userError } = await supabase.auth.admin.getUserById(device_id);
