@@ -138,8 +138,9 @@ require.cache[authPath] = {
     assert.ok(html.includes('/launch/site.css'));
     assert.ok(html.includes('/launch/site.js'));
     assert.ok(legal.includes('pre-launch drafts, not final legal terms'));
-    assert.doesNotMatch(html + legal, /https?:\\/\\/[^"' ]+<script/i);
-    assert.doesNotMatch(js, /innerHTML|eval\\s*\\(/);
+    assert.ok(!/<script[^>]+src=["']https?:/i.test(html + legal));
+    assert.ok(!js.includes('innerHTML'));
+    assert.ok(!js.includes('eval('));
   });
   test('Vercel policy permits only same-origin website assets and API calls', () => {
     const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../vercel.json'), 'utf8'));
