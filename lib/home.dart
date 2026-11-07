@@ -8,6 +8,7 @@ import 'services.dart';
 import 'store.dart';
 import 'rewards.dart';
 import 'theme.dart';
+import 'legal.dart';
 
 /// Stops sharing, tells the server, clears local flags and logs out.
 Future<void> signOutAndReset(NavigatorState nav) async {
@@ -776,7 +777,19 @@ class _AccountScreenState extends State<AccountScreen> {
                     const SizedBox(height: 8),
                     for (final card in _cards) _CardRow(card: card, onCopy: _copyCode),
                   ],
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
+                  Text('Legal & privacy', style: T.heading(c)),
+                  const SizedBox(height: 8),
+                  SecondaryButton(
+                    label: 'Terms of Service',
+                    onPressed: () => Navigator.of(context).push(fadeRoute<void>(const TermsScreen())),
+                  ),
+                  const SizedBox(height: 8),
+                  SecondaryButton(
+                    label: 'Privacy Policy',
+                    onPressed: () => Navigator.of(context).push(fadeRoute<void>(const PrivacyScreen())),
+                  ),
+                  const SizedBox(height: 32),
                   Text('Account ID', style: T.small(c)),
                   const SizedBox(height: 2),
                   SelectableText(id, style: T.small(c).copyWith(color: c.ink)),
