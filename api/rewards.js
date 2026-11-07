@@ -13,7 +13,10 @@ module.exports = wrap(async (req, res) => {
       supabase.from('device_memberships').select('plan, starts_at, expires_at').eq('device_id', deviceId).maybeSingle(),
       supabase.from('wheel_spins').select('created_at, points_awarded').eq('device_id', deviceId).order('created_at', { ascending: false }).limit(1),
     ]);
-    if (membershipQ.error || spinQ.error) {\n      console.error('rewards_setup_required', membershipQ.error?.code, spinQ.error?.code);\n      return res.status(503).json({ error: 'rewards_setup_required' });\n    }
+    if (membershipQ.error || spinQ.error) {
+      console.error('rewards_setup_required', membershipQ.error?.code, spinQ.error?.code);
+      return res.status(503).json({ error: 'rewards_setup_required' });
+    }
     const m = membershipQ.data;
     const active = Boolean(m && m.plan !== 'free' && m.expires_at && new Date(m.expires_at).getTime() > Date.now());
     const plan = active ? m.plan : 'free';
@@ -43,7 +46,10 @@ module.exports = wrap(async (req, res) => {
   const body = bodyOf(req);
   if (body.action === 'spin') {
     const { data, error } = await supabase.rpc('spin_gain_deep_wheel', { p_device_id: deviceId });
-    if (error) {\n      console.error('wheel_rpc_failed', error.code, error.message);\n      return res.status(503).json({ error: 'rewards_setup_required' });\n    }
+    if (error) {
+      console.error('wheel_rpc_failed', error.code, error.message);
+      return res.status(503).json({ error: 'rewards_setup_required' });
+    }
     const result = typeof data === 'string' ? JSON.parse(data) : data;
     if (result.status === 'cooldown') return res.status(429).json({ error: 'wheel_cooldown', next_spin_at: result.next_spin_at });
     if (result.status === 'account_frozen') return res.status(403).json({ error: 'account_frozen' });
@@ -53,7 +59,10 @@ module.exports = wrap(async (req, res) => {
   if (body.action === 'purchase_plan') {
     if (!['plus', 'pro', 'elite'].includes(body.plan)) return res.status(400).json({ error: 'invalid_plan' });
     const { data, error } = await supabase.rpc('purchase_gain_deep_plan', { p_device_id: deviceId, p_plan: body.plan });
-    if (error) {\n      console.error('membership_rpc_failed', error.code, error.message);\n      return res.status(503).json({ error: 'rewards_setup_required' });\n    }
+    if (error) {
+      console.error('membership_rpc_failed', error.code, error.message);
+      return res.status(503).json({ error: 'rewards_setup_required' });
+    }
     const result = typeof data === 'string' ? JSON.parse(data) : data;
     if (result.status === 'insufficient_points') return res.status(409).json({ error: 'insufficient_points', required: result.required, available: result.available });
     if (result.status === 'account_frozen') return res.status(403).json({ error: 'account_frozen' });
