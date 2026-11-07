@@ -441,6 +441,8 @@ String _friendlyApi(String code, int status) {
       return 'Pick one of the listed amounts.';
     case 'payout_failed':
       return 'The gift card order failed. Your points were returned.';
+    case 'rewards_setup_required':
+      return 'Rewards are being set up. Please try again later.';
     case 'db_error':
     case 'server_error':
       return 'This feature is temporarily unavailable. Please try again later.';
