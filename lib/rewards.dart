@@ -65,7 +65,7 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
         final target = costs[plan] ?? 0;
         final current = costs[_activePlan] ?? 0;
         final required = target - (current < target ? current : 0);
-        final missing = (required - _availablePoints).clamp(0, double.infinity);
+        final missing = (required - _availablePoints).clamp(0, double.infinity).toDouble();
         setState(() => _message = e.code == 'insufficient_points'
             ? 'You do not have the points required. This purchase needs $required points; you have ${fmtNum(_availablePoints)} available (${fmtNum(missing)} more needed).'
             : e.message);
