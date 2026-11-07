@@ -101,7 +101,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     Text('Before you start sharing', style: T.title(c)),
                     const SizedBox(height: 12),
                     Text(
-                      'GainDeep can share your phone's network connection. Here is what that means.',
+                      "GainDeep can share your phone's network connection. Here is what that means.",
                       style: T.body(c).copyWith(color: c.muted),
                     ),
                     const SizedBox(height: 32),
@@ -111,7 +111,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     ),
                     const _Fact(
                       'Other people\'s traffic uses your connection.',
-                      'Other users' encrypted network traffic may leave through your IP address and use your data allowance.',
+                      "Other users' encrypted network traffic may leave through your IP address and use your data allowance.",
                     ),
                     const _Fact(
                       'You earn 2 points per megabyte.',
