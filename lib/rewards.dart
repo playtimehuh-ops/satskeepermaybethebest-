@@ -165,7 +165,7 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
                 )),
                 const SizedBox(height: 14),
                 if (_lastPrize != null) Center(child: Text(_lastPrize == 0 ? '0 points' : '+$_lastPrize points', style: T.title(c))),
-                PrimaryButton(label: _busy ? 'Spinning…' : _canSpin ? 'Spin for points' : 'Spin available in 24 hours', onPressed: _canSpin ? _spin : null, busy: _busy),
+                PrimaryButton(label: _busy ? 'Spinning…' : _data.isEmpty ? 'Wheel temporarily unavailable' : _canSpin ? 'Spin for points' : 'Spin available in 24 hours', onPressed: _canSpin ? _spin : null, busy: _busy),
                 if (_message != null) Padding(padding: const EdgeInsets.only(top: 14), child: Message(_message!)),
                 if ((_data['history'] as List?)?.isNotEmpty == true) ...[
                   const SizedBox(height: 28),
