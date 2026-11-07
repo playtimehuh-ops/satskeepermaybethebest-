@@ -17,7 +17,8 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
   bool _loading = true;
   bool _busy = false;
   String? _message;
-  int? _lastPrize;\n  double _availablePoints = 0;
+  int? _lastPrize;
+  double _availablePoints = 0;
 
   @override
   void initState() {
@@ -36,7 +37,13 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
     try {
       final result = await Api.rewards();
       double balance = _availablePoints;
-      try {\n        final ledger = await Api.ledger();\n        balance = asDouble(ledger['available'] ?? ledger['points']);\n      } on ApiException {\n        // Keep the last known spendable balance if the ledger is temporarily unavailable.\n      }\n      if (mounted) setState(() { _data = result; _availablePoints = balance; _loading = false; });
+      try {
+        final ledger = await Api.ledger();
+        balance = asDouble(ledger['available'] ?? ledger['points']);
+      } on ApiException {
+        // Keep the last known spendable balance if the ledger is temporarily unavailable.
+      }
+      if (mounted) setState(() { _data = result; _availablePoints = balance; _loading = false; });
     } on ApiException catch (e) {
       if (mounted) setState(() { _message = e.message; _loading = false; });
     }
@@ -53,7 +60,16 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
         await _load();
       }
     } on ApiException catch (e) {
-      if (mounted) {\n        const costs = {'plus': 2500, 'pro': 7500, 'elite': 15000, 'free': 0};\n        final target = costs[plan] ?? 0;\n        final current = costs[_activePlan] ?? 0;\n        final required = target - (current < target ? current : 0);\n        final missing = (required - _availablePoints).clamp(0, double.infinity);\n        setState(() => _message = e.code == 'insufficient_points'\n            ? 'You do not have the points required. This purchase needs $required points; you have ${fmtNum(_availablePoints)} available (${fmtNum(missing)} more needed).'\n            : e.message);\n      }
+      if (mounted) {
+        const costs = {'plus': 2500, 'pro': 7500, 'elite': 15000, 'free': 0};
+        final target = costs[plan] ?? 0;
+        final current = costs[_activePlan] ?? 0;
+        final required = target - (current < target ? current : 0);
+        final missing = (required - _availablePoints).clamp(0, double.infinity);
+        setState(() => _message = e.code == 'insufficient_points'
+            ? 'You do not have the points required. This purchase needs $required points; you have ${fmtNum(_availablePoints)} available (${fmtNum(missing)} more needed).'
+            : e.message);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
