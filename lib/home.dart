@@ -242,7 +242,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final started = await NodeChannel.start();
       if (!started) throw ApiException(0, 'The sharing service did not start.');
     } on PlatformException catch (e) {
-      if (mounted) setState(() => _error = e.message ?? 'Couldn\'t start the sharing service.');
+      if (mounted) setState(() => _error = 'The sharing service could not start. Check your connection and try again.');
     }
     await _refresh();
   }
@@ -344,7 +344,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       await _refresh();
     } on PlatformException catch (e) {
-      if (mounted) setState(() => _error = e.message ?? 'Sharing service error.');
+      if (mounted) setState(() => _error = 'The sharing service encountered a problem. Try again.');
     } finally {
       _busy = false;
     }
