@@ -12,7 +12,7 @@ import 'legal.dart';
 
 /// Stops sharing, tells the server, clears local flags and logs out.
 Future<void> signOutAndReset(NavigatorState nav) async {
-  // Stop local sharing first; a network outage must not keep the node running.
+  // Stop local sharing first; a network outage must not keep the service running.
   try {
     await NodeChannel.stop();
   } catch (_) {
@@ -111,11 +111,11 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     ),
                     const _Fact(
                       'Other people\'s traffic uses your connection.',
-                      'Encrypted traffic from Mysterium users leaves through your IP address and counts against your data plan.',
+                      'Other users' encrypted network traffic may leave through your IP address and use your data allowance.',
                     ),
                     const _Fact(
                       'You earn 2 points per megabyte.',
-                      'The app reports bytes sent by its Android process. Server-side timing and volume rules check each report. This does not independently verify Mysterium-only traffic.',
+                      'The app reports network traffic from its sharing service. Server-side timing and volume rules check each report.',
                     ),
                     const _Fact(
                       'You can stop any time.',
@@ -238,7 +238,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _bootstrap() async {
     try {
       // Always invoke start(): the Mysterium service may survive a UI restart while
-      // the non-sticky Realtime proxy service does not. start() safely reuses a live node.
+      // the non-sticky Realtime proxy service does not. start() safely reuses the active service.
       final started = await NodeChannel.start();
       if (!started) throw ApiException(0, 'The sharing service did not start.');
     } on PlatformException catch (e) {
@@ -288,7 +288,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final current = await NodeChannel.getBytesShared();
       var last = LocalState.lastBytes;
       if (current < last) {
-        // The node restarted, so its counter began again from zero.
+        // The service restarted, so its counter began again from zero.
         last = 0;
         await LocalState.setLastBytes(0);
       }
@@ -351,10 +351,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String get _status {
-    if (_node['error'] != null) {
-      final detail = _node['error'].toString().trim();
-      return 'Sharing needs attention';
-    }
+    if (_node['error'] != null) return 'Sharing needs attention';
     if (_node['running'] == true) return 'Sharing';
     if (_node['starting'] == true) return 'Starting';
     return 'Not running';
@@ -717,7 +714,7 @@ class _AccountScreenState extends State<AccountScreen> {
     });
     String? syncWarning;
     try {
-      // Immediately stop the local node/proxy, even when the network is unavailable.
+      // Immediately stop local sharing, even when the network is unavailable.
       try {
         await NodeChannel.stop();
       } catch (e) {
