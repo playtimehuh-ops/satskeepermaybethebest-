@@ -115,7 +115,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     ),
                     const _Fact(
                       'You earn 2 points per megabyte.',
-                      'The app reports network traffic from its sharing service. Server-side timing and volume rules check each report.',
+                      'The app reports network traffic from its sharing service. Server-side timing and volume rules check each report, but this does not independently verify that every byte came from that service.',
                     ),
                     const _Fact(
                       'You can stop any time.',
