@@ -74,7 +74,8 @@ module.exports = wrap(async (req, res) => {
   const reward_amount = Number(body.value);
   if (!PRODUCT_ID.test(String(product_id || '')) || !product_name || product_name.length > 128 ||
       !EMAIL.test(beneficiary_email) || beneficiary_email.length > 254 ||
-      !Number.isFinite(reward_amount) || reward_amount <= 0 ||\n      reward_amount > (config.hasCardValueCap(reward_currency) ? config.maxCardValue(reward_currency) : 10) ||
+      !Number.isFinite(reward_amount) || reward_amount <= 0 ||
+      reward_amount > (config.hasCardValueCap(reward_currency) ? config.maxCardValue(reward_currency) : 10) ||
       !/^[A-Z]{3,12}$/.test(reward_currency) ||
       !isManualItem(product_id, product_name, reward_currency, reward_amount)) {
     return res.status(400).json({ error: 'bad_request' });
