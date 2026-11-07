@@ -441,6 +441,11 @@ String _friendlyApi(String code, int status) {
       return 'Pick one of the listed amounts.';
     case 'payout_failed':
       return 'The gift card order failed. Your points were returned.';
+    case 'db_error':
+    case 'server_error':
+      return 'This feature is temporarily unavailable. Please try again later.';
+    case 'insufficient_points':
+      return 'You do not have enough points for this membership. Earn more points or choose a lower plan.';
     case 'wheel_cooldown':
       return 'Your free spin is not ready yet. Check back after the 24-hour cooldown.';
     case 'plan_already_active':
