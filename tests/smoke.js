@@ -118,6 +118,39 @@ require.cache[authPath] = {
     assert.strictEqual(value, 'ABC | PIN 1234');
   });
 
+  // Public status endpoint must disclose only safe, non-operational readiness facts.
+  const publicStatus = require('../api/public-status');
+  await testAsync('public status endpoint is read-only and GET-only', async () => {
+    const r = await invoke(publicStatus, { method: 'GET' });
+    assert.strictEqual(r.statusCode, 200);
+    assert.strictEqual(r.body.product, 'GainDeep');
+    assert.strictEqual(r.body.stage, 'prelaunch');
+    assert.strictEqual(r.body.features.points_earning, 'not_cleared_for_public_launch');
+    assert.strictEqual(r.body.features.buyer_traffic_api, 'not_available');
+    assert.ok(!JSON.stringify(r.body).includes('SUPABASE_SERVICE_ROLE_KEY'));
+    const denied = await invoke(publicStatus, { method: 'POST' });
+    assert.strictEqual(denied.statusCode, 405);
+  });
+  test('launch website uses local assets and labels legal pages as drafts', () => {
+    const html = fs.readFileSync(path.join(__dirname, '../launch/index.html'), 'utf8');
+    const legal = fs.readFileSync(path.join(__dirname, '../launch/legal.html'), 'utf8');
+    const js = fs.readFileSync(path.join(__dirname, '../launch/site.js'), 'utf8');
+    assert.ok(html.includes('/launch/site.css'));
+    assert.ok(html.includes('/launch/site.js'));
+    assert.ok(legal.includes('pre-launch drafts, not final legal terms'));
+    assert.doesNotMatch(html + legal, /https?:\\/\\/[^"' ]+<script/i);
+    assert.doesNotMatch(js, /innerHTML|eval\\s*\\(/);
+  });
+  test('Vercel policy permits only same-origin website assets and API calls', () => {
+    const config = JSON.parse(fs.readFileSync(path.join(__dirname, '../vercel.json'), 'utf8'));
+    const headers = config.headers[0].headers;
+    const csp = headers.find((h) => h.key === 'Content-Security-Policy').value;
+    assert.ok(csp.includes("script-src 'self'"));
+    assert.ok(csp.includes("style-src 'self'"));
+    assert.ok(csp.includes("connect-src 'self'"));
+    assert.ok(csp.includes("frame-ancestors 'none'"));
+  });
+
   // API validation paths with a fake authenticated session and mocked database.
   const consent = require('../api/consent');
   const verify = require('../api/verify-bandwidth');

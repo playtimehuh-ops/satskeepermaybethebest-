@@ -1,35 +1,52 @@
-# SatsKeeper security notes
+# GainDeep security and launch gates
 
-## What protects the money
-- **Atomic database logic.** Reports, awards, spends and refunds are Postgres functions with row locks (`supabase/schema.sql`). Double taps and parallel requests cannot double-spend or double-award.
-- **Retry-safe reports.** Each report has an id; the same id is never counted twice, even if the phone retries.
-- **Hard limits, enforced in SQL.** 20 s between reports, at most 2048 MB per report and 12.5 MB/s of elapsed time, 10 000 MB per user per 24 h.
-- **24 h vesting.** New points cannot be spent for 24 h, which gives you time to freeze a cheater.
-- **Redemption caps.** 1 per user per day, 20 per day for the whole app, invoice price ceiling, per-currency face-value caps.
-- **Verify before pay.** The Bitrefill invoice is created unpaid, its price is checked, and only then paid. A failed or refused order refunds exactly once.
-- **Accounts.** Confirmed e-mail required. Every call needs the app key plus a valid login token. The user id comes from the token, never from the request.
-- **Lockdown.** Tables have RLS on with no policies; functions are callable only by the service role. Errors never include internal details.
+This file describes the current implementation honestly. A successful GitHub Actions build is not a security audit or proof that the live app works end to end.
 
-## Honest limits
-- A modified app can lie about bandwidth. The limits above cap how much a liar can earn; they cannot prove traffic. Watch `GET /api/admin?action=overview`.
-- The app key inside the APK can be extracted. It is a speed bump, not a secret. Login tokens are the real gate.
-- Keep your Bitrefill balance small. It is the final cap on any loss.
+## Controls currently present
 
-## Do this before real users
-1. Supabase > Authentication: keep **Confirm email** ON, enable CAPTCHA and rate limits, set a minimum password length of 10.
-2. Vercel > Firewall: add a rate-limit rule on `/api/*` (for example 60 requests per minute per IP).
-3. Set `ADMIN_USER`, `ADMIN_PASS` (20+ chars) and `CRON_SECRET` (16+ chars) in Vercel.
-4. Make a release key and add four GitHub secrets, so every build is signed with the same key:
-   `keytool -genkeypair -v -keystore release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias satskeeper`
-   - Windows PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("release.jks")) | Set-Clipboard`
-   - Mac/Linux: `base64 -w0 release.jks`
-   - Secrets: `ANDROID_KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` (satskeeper), `KEY_PASSWORD`. Back the keystore up somewhere private.
-5. Never put `SUPABASE_SERVICE_ROLE_KEY` in the app or in GitHub secrets for the app build.
+- API account routes require the app key and a valid Supabase user session; the user ID is derived from the verified token.
+- Confirmed email is required by the API session helper.
+- The Supabase service-role key is referenced only by server-side API code and must never be added to Flutter, static website files, or public GitHub files.
+- Points, wheel, membership, and redemption balance changes use server-side database functions, including row locks and idempotency checks in the relevant SQL functions.
+- Reward redemption is currently a manual-review request, not an automatically paid gift-card order.
+- The public launch status endpoint returns a fixed, non-sensitive readiness summary. It does not expose secrets or account information.
+- Vercel applies restrictive browser security headers and disables caching for responses.
 
-## Admin (HTTP Basic auth)
-- Overview: `curl -u USER:PASS "https://YOUR-APP.vercel.app/api/admin?action=overview"`
-- Freeze a user: `curl -u USER:PASS -X POST -H "Content-Type: application/json" -d '{"device_id":"USER-UUID","frozen":true,"reason":"abuse"}' "https://YOUR-APP.vercel.app/api/admin?action=freeze"`
-- Stuck orders: `action=stuck`. Re-check them: `action=reconcile` (also runs daily by cron). Refund one: POST `action=refund` with `{"redemption_id":123}`.
+## Known blockers — do not call this production-ready
 
-## Not done (future)
-Play Integrity attestation, certificate pinning, device-level duplicate-account detection.
+1. `api/verify-bandwidth.js` rejects client-reported measurements with `409 untrusted_measurement_source`. That prevents those reports from earning points. Do not remove this guard or trust client-supplied byte counts to make the dashboard look functional.
+2. The Android traffic counters do not independently prove that bytes belong exclusively to an authorized provider process.
+3. The custom proxy gateway is not approved for public commercial traffic resale. Buyer-to-device authorization, buyer billing/quotas, provider authorization, abuse handling, and a live end-to-end service test are not complete. The proxy schema and policies must not be assumed live merely because a SQL file exists in the repository.
+4. The gateway's shared API-key model is not a complete buyer identity, quota, or billing system. Do not distribute a shared key to buyers.
+5. Membership and wheel database functions have been tested transactionally, but full production app-to-API flows still need real-device verification.
+6. Gift-card catalogue visibility is not a promise of local stock. Current manual redemption requests require human review and fulfilment.
+7. A prior Android workflow configuration permits debug signing when no release keystore is configured. A debug-signed APK is for testing only and is not a Play Store release artifact.
+8. Independent security review, Play Integrity/device-abuse protections, a verified account deletion workflow, and an exact data-retention schedule are not complete.
+9. Supabase security-advisor items such as leaked-password protection and RLS-without-policies warnings still need review. Service-role-only tables with no client policies may be intentional, but the configuration must be checked against the live project.
+10. Legal operator identity, public support/privacy contact, governing law, and provider contracts have not been finalized.
+
+## Required before public launch
+
+- An eligible adult legal operator must own and approve the service, provider accounts, legal notices, payment/reward arrangements, and production credentials. Do not bypass provider age or operator requirements.
+- Keep Supabase email confirmation enabled; configure strong password rules, CAPTCHA, and authentication rate limits.
+- Configure Vercel rate limits for all sensitive API routes, including authentication-adjacent and redemption endpoints.
+- Store `APP_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_USER`, `ADMIN_PASS`, `CRON_SECRET`, and provider credentials only in the correct server-side secret stores. Never commit their values.
+- Use a permanent Android release keystore. Verify all four signing secrets: `ANDROID_KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. Back up the keystore securely. Do not distribute debug-signed builds.
+- Test account creation, email confirmation, sign-in, sign-out, consent on/off, points ledger, membership purchase, wheel cooldown, reward request, manual fulfilment, and account deletion on real devices.
+- Verify every provider contract, allowed use, regional eligibility, user disclosure, and adult-operator requirement before enabling network sharing.
+- Complete an independent security/privacy review and publish finalized Terms and Privacy Policy with the operator identity, contact, jurisdiction, retention schedule, and user-rights process.
+
+## Secret handling
+
+- Never put `SUPABASE_SERVICE_ROLE_KEY`, provider secrets, admin passwords, refresh tokens, private keys, or release keystores in Flutter code, the launch website, or committed files.
+- The Flutter app's app key is extractable from the APK. Treat it as a public client identifier, not a secret; user authentication and server-side authorization must provide the real access control.
+- Do not log bearer tokens, passwords, gift-card codes, or private keys.
+- Rotate any credential that may have been exposed.
+
+## Admin operations
+
+The admin API uses HTTP Basic authentication and must be protected with a long unique password, rate limiting, and restricted access. Do not place admin credentials in browser JavaScript or share them with users. Reconciliation and manual refund actions must be reviewed before execution.
+
+## Security contact
+
+A public security-reporting email has not been selected yet. Add a monitored contact before public launch; do not invent or publish an unmonitored address.

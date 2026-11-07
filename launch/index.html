@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f0e8">
+  <meta name="description" content="GainDeep is preparing a more transparent way to turn eligible network-sharing activity into in-app rewards.">
+  <title>GainDeep — Pre-launch</title>
+  <link rel="stylesheet" href="/launch/site.css">
+  <script src="/launch/site.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/launch/" aria-label="GainDeep home"><span class="brand-mark">G</span> GainDeep</a>
+    <nav aria-label="Main navigation">
+      <a href="#how">How it works</a>
+      <a href="#safety">Safety</a>
+      <a href="/launch/legal.html">Legal</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow"><span class="dot"></span> BUILDING IN PUBLIC · PRE-LAUNCH</p>
+      <h1>Make your connection<br><em>count.</em></h1>
+      <p class="intro">GainDeep is an app project exploring opt-in network sharing and points-based rewards. We are keeping public launch gated until the important safety, provider, and fulfilment checks are complete.</p>
+      <div class="hero-actions">
+        <a class="button" href="#status">View live status</a>
+        <a class="text-link" href="/launch/legal.html">Read legal drafts <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="ribbon ribbon-one" aria-hidden="true"></div>
+      <div class="ribbon ribbon-two" aria-hidden="true"></div>
+    </section>
+
+    <section class="status-panel" id="status" aria-labelledby="status-title">
+      <div class="section-head">
+        <div><p class="eyebrow">PUBLIC API</p><h2 id="status-title">Service status</h2></div>
+        <span id="api-state" class="status-pill">Checking…</span>
+      </div>
+      <p class="muted">This read-only endpoint reports launch gates. It does not test a phone, verify earnings, or confirm reward stock.</p>
+      <dl id="feature-status" class="status-list">
+        <div><dt>Accounts</dt><dd>Loading</dd></div>
+        <div><dt>Points earning</dt><dd>Loading</dd></div>
+        <div><dt>Memberships &amp; wheel</dt><dd>Loading</dd></div>
+        <div><dt>Gift cards</dt><dd>Loading</dd></div>
+        <div><dt>Network sharing</dt><dd>Loading</dd></div>
+        <div><dt>Buyer traffic API</dt><dd>Loading</dd></div>
+      </dl>
+      <p id="checked-at" class="timestamp">Status has not been checked yet.</p>
+    </section>
+
+    <section class="content-grid" id="how">
+      <article class="content-card">
+        <p class="eyebrow">01 / THE IDEA</p>
+        <h2>Optional by design.</h2>
+        <p>Sharing should only happen after a clear opt-in. A user must be able to pause it, understand that traffic may use their connection and IP address, and check what the app actually measures.</p>
+      </article>
+      <article class="content-card accent-card" id="safety">
+        <p class="eyebrow">02 / THE STANDARD</p>
+        <h2>Proof before promises.</h2>
+        <p>Points, memberships, and reward requests must be tested end to end. A working screen or successful build is not proof of real traffic, earnings, available gift cards, or successful delivery.</p>
+      </article>
+    </section>
+
+    <section class="notice">
+      <strong>Not accepting public sign-ups yet.</strong>
+      <p>Network-sharing and buyer traffic features remain unavailable for public commercial use until provider permission, operator eligibility, security, and legal checks are confirmed.</p>
+    </section>
+  </main>
+
+  <footer>
+    <span>© <span id="year">2026</span> GainDeep · Pre-launch project</span>
+    <span><a href="/launch/legal.html">Terms &amp; Privacy drafts</a> · <a href="/api/public-status">Public API</a></span>
+  </footer>
+</body>
+</html>
