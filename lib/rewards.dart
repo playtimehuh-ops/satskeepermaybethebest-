@@ -138,9 +138,9 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
                 const SizedBox(height: 6),
                 Text('Current plan: ${_activePlan.toUpperCase()}${_data['expires_at'] == null ? '' : ' · until ${_date(_data['expires_at'])}'}', style: T.body(c)),
                 const SizedBox(height: 18),
-                _planCard(c, 'Plus', 2500, '30-day activity history', 'plus'),
-                _planCard(c, 'Pro', 7500, '90-day activity history', 'pro'),
-                _planCard(c, 'Elite', 15000, '365-day activity history', 'elite'),
+                _planCard(c, 'Plus', 2500, '30-day activity history · points activity at a glance', 'plus'),
+                _planCard(c, 'Pro', 7500, '90-day activity history · longer progress tracking', 'pro'),
+                _planCard(c, 'Elite', 15000, '365-day activity history · full-year progress view', 'elite'),
                 const SizedBox(height: 30),
                 Divider(color: c.rule),
                 const SizedBox(height: 16),
@@ -148,21 +148,61 @@ class _RewardsScreenState extends State<RewardsScreen> with SingleTickerProvider
                 const SizedBox(height: 5),
                 Text('One free spin every 24 hours. Server-selected odds: 0 points 10% · 5 points 30% · 10 points 30% · 15 points 20% · 25 points 8% · 50 points 2%.', style: T.small(c)),
                 const SizedBox(height: 22),
-                Center(child: SizedBox(
-                  width: 284, height: 284,
-                  child: Stack(alignment: Alignment.center, children: [
-                    AnimatedBuilder(
-                      animation: _wheelController,
-                      builder: (context, child) => Transform.rotate(
-                        angle: _wheelAngle + (_spinDelta * _wheelController.value),
-                        child: child,
-                      ),
-                      child: CustomPaint(size: const Size(280, 280), painter: _WheelPainter(c, prizes)),
+                Center(
+                  child: Container(
+                    width: 306,
+                    height: 306,
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: c.surface,
+                      border: Border.all(color: c.rule, width: 1),
+                      boxShadow: [
+                        BoxShadow(color: c.ink.withAlpha(22), blurRadius: 22, offset: const Offset(0, 10)),
+                      ],
                     ),
-                    Positioned(top: 0, child: Icon(Icons.arrow_drop_down, size: 42, color: c.ink)),
-                    Container(width: 58, height: 58, decoration: BoxDecoration(color: c.surface, shape: BoxShape.circle, border: Border.all(color: c.ink, width: 2)), child: Center(child: Text('GD', style: T.strong(c)))),
-                  ]),
-                )),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AnimatedBuilder(
+                          animation: _wheelController,
+                          builder: (context, child) => Transform.rotate(
+                            angle: _wheelAngle + (_spinDelta * Curves.easeOutCubic.transform(_wheelController.value)),
+                            child: child,
+                          ),
+                          child: CustomPaint(
+                            size: const Size(280, 280),
+                            painter: _WheelPainter(c, prizes),
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          child: Container(
+                            width: 30,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: c.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: c.ink, width: 1.5),
+                            ),
+                            child: Icon(Icons.keyboard_arrow_down, size: 28, color: c.ink),
+                          ),
+                        ),
+                        Container(
+                          width: 66,
+                          height: 66,
+                          decoration: BoxDecoration(
+                            color: c.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: c.ink, width: 2),
+                            boxShadow: [BoxShadow(color: c.ink.withAlpha(28), blurRadius: 8)],
+                          ),
+                          child: Center(child: Text('GD', style: T.strong(c))),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 14),
                 if (_lastPrize != null) Center(child: Text(_lastPrize == 0 ? '0 points' : '+$_lastPrize points', style: T.title(c))),
                 PrimaryButton(label: _busy ? 'Spinning…' : _data.isEmpty ? 'Wheel temporarily unavailable' : _canSpin ? 'Spin for points' : 'Spin available in 24 hours', onPressed: _canSpin ? _spin : null, busy: _busy),
