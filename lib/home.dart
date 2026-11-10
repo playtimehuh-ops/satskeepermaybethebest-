@@ -242,6 +242,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final started = await NodeChannel.start();
       if (!started) throw ApiException(0, 'The sharing service did not start.');
     } on PlatformException catch (e) {
+      await NodeChannel.log('Dashboard bootstrap failed: ${e.message}', level: 'error');
       if (mounted) setState(() => _error = 'The sharing service could not start. Check your connection and try again.');
     }
     await _refresh();
@@ -271,7 +272,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final t = asDouble(j['threshold']);
         if (t > 0) _threshold = t;
         _streak = asDouble(j['streak']).toInt();
-        _error = null;
       });
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -332,6 +332,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // Refusals (400/403) are final, so drop the report. Anything else keeps it and
           // retries with the same id on the next tick.
           if (e.status == 400 || e.status == 403 || e.status == 409) await LocalState.clearPending();
+          await NodeChannel.log('Bandwidth report rejected (${e.status}): ${e.message}', level: 'warn');
           if (mounted) setState(() => _lastReport = e.message);
         }
       }
@@ -344,6 +345,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       await _refresh();
     } on PlatformException catch (e) {
+      await NodeChannel.log('Sharing tick failed: ${e.message}', level: 'error');
       if (mounted) setState(() => _error = 'The sharing service encountered a problem. Try again.');
     } finally {
       _busy = false;
@@ -422,7 +424,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: T.small(c).copyWith(fontSize: 15),
                     ),
                     const SizedBox(height: 32),
-                    Text('Recent reports', style: T.heading(c)),
+                    Row(
+                      children: [
+                        Expanded(child: Text("Recent reports", style: T.heading(c))),
+                        TextButton.icon(
+                          onPressed: () => Navigator.of(context).push(fadeRoute<void>(const LogsScreen())),
+                          icon: const Icon(Icons.article_outlined, size: 18),
+                          label: const Text("Logs"),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 4),
                     Text('App network megabytes reported per minute, newest on the right.', style: T.small(c)),
                     const SizedBox(height: 14),
@@ -483,6 +494,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 label: ready ? 'Choose a gift card' : 'Browse the store',
                 onPressed: _openStore,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LogsScreen extends StatefulWidget {
+  const LogsScreen({super.key});
+  @override
+  State<LogsScreen> createState() => _LogsScreenState();
+}
+
+class _LogsScreenState extends State<LogsScreen> {
+  List<String> _entries = <String>[];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final entries = await NodeChannel.logs();
+      if (!mounted) return;
+      setState(() { _entries = entries.reversed.toList(); _loading = false; _error = null; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _loading = false; _error = "Could not load logs: $e"; });
+    }
+  }
+
+  Future<void> _clear() async {
+    try {
+      await NodeChannel.clearLogs();
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() => _error = "Could not clear logs: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            TopBar(
+              title: "Logs",
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(tooltip: "Refresh logs", onPressed: _load, icon: const Icon(Icons.refresh)),
+                  IconButton(tooltip: "Copy all logs", onPressed: _entries.isEmpty ? null : () => Clipboard.setData(ClipboardData(text: _entries.reversed.join("\n"))), icon: const Icon(Icons.copy)),
+                  IconButton(tooltip: "Clear logs", onPressed: _entries.isEmpty ? null : _clear, icon: const Icon(Icons.delete_outline)),
+                ],
+              ),
+            ),
+            if (_error != null) Padding(padding: const EdgeInsets.all(16), child: Message(_error!)),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _entries.isEmpty
+                      ? Center(child: Text("No logs yet. Events will appear here.", style: T.body(c)))
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _entries.length,
+                          separatorBuilder: (_, __) => Divider(height: 1, color: c.rule),
+                          itemBuilder: (context, index) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: SelectableText(_entries[index], style: T.small(c).copyWith(fontFamily: "monospace", fontSize: 12)),
+                          ),
+                        ),
             ),
           ],
         ),
