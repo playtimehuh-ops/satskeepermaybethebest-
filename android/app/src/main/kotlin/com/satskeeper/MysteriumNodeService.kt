@@ -69,10 +69,12 @@ class MysteriumNodeService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        AppLogStore.add(this, "info", "Mysterium service created")
         createChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        AppLogStore.add(this, "info", "Mysterium service start command received")
         enterForeground()
         acquireWakeLock()
         startNode()
@@ -80,6 +82,7 @@ class MysteriumNodeService : Service() {
     }
 
     override fun onDestroy() {
+        AppLogStore.add(this, "info", "Mysterium service stopping")
         releaseWakeLock()
         stopProvider()
         super.onDestroy()
@@ -189,6 +192,7 @@ class MysteriumNodeService : Service() {
         if (running || starting) return
         starting = true
         failure = null
+        AppLogStore.add(this, "info", "Provider startup beginning")
         val appContext = applicationContext
         Thread {
             try {
@@ -201,9 +205,11 @@ class MysteriumNodeService : Service() {
                 baselineTxBytes = uidTxBytes()
                 running = true
                 Log.i(TAG, "provider started")
+                AppLogStore.add(appContext, "success", "Mysterium provider started")
             } catch (t: Throwable) {
                 failure = t.message ?: t.javaClass.simpleName
                 Log.e(TAG, "failed to start node", t)
+                AppLogStore.add(appContext, "error", "Mysterium startup failed: " + (t.message ?: t.javaClass.simpleName))
                 CustomProxyService.stop(this)
                 stopSelf()
             } finally {
@@ -250,9 +256,11 @@ class MysteriumNodeService : Service() {
                 val code = connection.responseCode
                 if (code in 200..299) {
                     Log.i(TAG, "payout address set for provider identity")
+                    AppLogStore.add(this, "success", "Provider payout address accepted by local API")
                     return
                 }
                 Log.w(TAG, "payout address attempt failed: TequilAPI HTTP $code")
+                AppLogStore.add(this, "warn", "Payout address setup returned HTTP $code")
             } catch (t: Throwable) {
                 Log.w(TAG, "payout address attempt ${attempt + 1}/5 failed: ${t.message}")
             } finally {
@@ -268,6 +276,7 @@ class MysteriumNodeService : Service() {
             }
         }
         Log.e(TAG, "payout address setup failed after 5 attempts")
+        AppLogStore.add(this, "error", "Payout address setup failed after 5 attempts")
     }
 
     private fun stopProvider() {
