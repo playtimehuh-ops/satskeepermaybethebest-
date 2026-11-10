@@ -30,7 +30,7 @@ create table if not exists public.stream_donations (
   stream_id uuid not null references public.stream_sessions(id) on delete cascade,
   donor_id uuid not null references auth.users(id) on delete restrict,
   creator_id uuid not null references auth.users(id) on delete restrict,
-  points_total integer not null check (points_total between 1 and 10000),
+  points_total integer not null check (points_total between 10 and 10000 and points_total % 10 = 0),
   creator_points integer not null check (creator_points >= 0),
   platform_points integer not null check (platform_points >= 0),
   created_at timestamptz not null default now()
@@ -62,15 +62,20 @@ declare
   v_creator_points integer;
   v_platform_points integer;
 begin
-  if p_donor_id is null or p_stream_id is null or p_points is null or p_points < 1 or p_points > 10000 then
+  if p_donor_id is null or p_stream_id is null or p_points is null or p_points < 10 or p_points > 10000 or p_points % 10 <> 0 then
     return jsonb_build_object('status','invalid');
   end if;
   select * into s from public.stream_sessions where id = p_stream_id for update;
   if not found or s.status <> 'live' or s.moderation_status <> 'approved' then return jsonb_build_object('status','not_live'); end if;
   if s.creator_id = p_donor_id then return jsonb_build_object('status','self_donation'); end if;
-  select * into donor from public.devices where device_id = p_donor_id::text for update;
+  -- Lock both accounts in stable order to avoid reciprocal-donation deadlocks.
+  perform 1 from public.devices
+   where device_id in (p_donor_id::text, s.creator_id::text)
+   order by device_id
+   for update;
+  select * into donor from public.devices where device_id = p_donor_id::text;
   if not found or donor.frozen or public.available_points(p_donor_id::text) < p_points then return jsonb_build_object('status','insufficient_points'); end if;
-  select * into creator from public.devices where device_id = s.creator_id::text for update;
+  select * into creator from public.devices where device_id = s.creator_id::text;
   if not found or creator.frozen then return jsonb_build_object('status','creator_unavailable'); end if;
   v_creator_points := floor(p_points * 0.70)::integer;
   v_platform_points := p_points - v_creator_points;
