@@ -173,7 +173,7 @@ class MysteriumNodeService : Service() {
 
         val address = identity.identityAddress
         if (!n.isFreeRegistrationEligible(address)) {
-            throw IllegalStateException("Mysterium provider identity is not registered and is not eligible for free registration")
+            throw IllegalStateException("Mysterium provider identity is not registered and this identity is not eligible for automatic free registration. The account owner must complete Mysterium's official provider registration or obtain an eligible registration token. GainDeep will not bypass this requirement.")
         }
 
         val request = RegisterIdentityRequest()
