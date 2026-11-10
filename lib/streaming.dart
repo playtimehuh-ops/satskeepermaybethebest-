@@ -58,7 +58,7 @@ class _StreamHubScreenState extends State<StreamHubScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           FilledButton(onPressed: () {
             final value = int.tryParse(controller.text.trim());
-            if (value != null && value >= 10 && value <= 10000 && value % 10 === 0) Navigator.pop(context, value);
+            if (value != null && value >= 10 && value <= 10000 && value % 10 == 0) Navigator.pop(context, value);
           }, child: const Text('Continue')),
         ],
       ),
