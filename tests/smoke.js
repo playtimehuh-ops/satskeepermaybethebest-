@@ -291,6 +291,10 @@ require.cache[authPath] = {
     assert.ok(streamUiSource.includes('Report stream'));
   });
   test('stream UI discloses video provider setup is pending', () => assert.ok(streamUiSource.includes('Video provider setup pending')));
+  test('creator approval requires recorded adult verification', () => {
+    assert.ok(streamSqlSource.includes('adult_verified_at timestamptz'));
+    assert.ok(streamSqlSource.includes("status <> 'approved' or adult_verified_at is not null"));
+  });
 
   // CryptoRefills validation-only path must never create orders or reserve points.
   const cryptoValidationSource = fs.readFileSync(path.join(__dirname, '../api/cryptorefills-validate.js'), 'utf8');
