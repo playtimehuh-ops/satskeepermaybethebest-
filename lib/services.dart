@@ -602,6 +602,13 @@ class Api {
     return map;
   }
 
+  static Future<Map<String, dynamic>> streams() => _send('GET', '/api/stream');
+  static Future<Map<String, dynamic>> applyForCreator(String displayName, String reason) =>
+      _send('POST', '/api/stream', body: {'action': 'apply', 'display_name': displayName, 'reason': reason});
+  static Future<Map<String, dynamic>> donateToStream(String streamId, int points) =>
+      _send('POST', '/api/stream', body: {'action': 'donate', 'stream_id': streamId, 'points': points});
+  static Future<Map<String, dynamic>> reportStream(String streamId, String reason) =>
+      _send('POST', '/api/stream', body: {'action': 'report', 'stream_id': streamId, 'reason': reason});
   static Future<Map<String, dynamic>> rewards() => _send('GET', '/api/rewards');
 
   static Future<Map<String, dynamic>> purchasePlan(String plan) =>
