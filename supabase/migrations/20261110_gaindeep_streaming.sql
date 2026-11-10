@@ -7,6 +7,8 @@ create table if not exists public.stream_creator_applications (
   status text not null default 'pending' check (status in ('pending','approved','rejected')),
   created_at timestamptz not null default now(),
   reviewed_at timestamptz,
+  adult_verified_at timestamptz,
+  constraint stream_creator_approval_requires_adult check (status <> 'approved' or adult_verified_at is not null),
   unique (user_id)
 );
 create table if not exists public.stream_sessions (
