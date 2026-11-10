@@ -9,6 +9,7 @@ import 'store.dart';
 import 'rewards.dart';
 import 'theme.dart';
 import 'legal.dart';
+import 'streaming.dart';
 
 /// Stops sharing, tells the server, clears local flags and logs out.
 Future<void> signOutAndReset(NavigatorState nav) async {
@@ -471,6 +472,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Icon(Icons.arrow_forward_ios, size: 16, color: c.muted),
                             ],
                           ),
+                        ),
+                      ),
+                    ),
+                    Material(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => Navigator.of(context).push(fadeRoute<void>(const StreamHubScreen())),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(children: [
+                            Container(width: 44, height: 44, decoration: BoxDecoration(color: c.cobalt.withAlpha(18), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.live_tv_outlined, color: c.cobalt)),
+                            const SizedBox(width: 14),
+                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text('Live streaming', style: T.strong(c)),
+                              Text('Watch live creators · donate points', style: T.small(c)),
+                            ])),
+                            Icon(Icons.arrow_forward_ios, size: 16, color: c.muted),
+                          ]),
                         ),
                       ),
                     ),
