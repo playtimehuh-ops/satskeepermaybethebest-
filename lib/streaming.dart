@@ -53,12 +53,12 @@ class _StreamHubScreenState extends State<StreamHubScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Donate points'),
         content: TextField(controller: controller, keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Points (1–10,000)')),
+          decoration: const InputDecoration(labelText: 'Points (10–10,000, multiples of 10)')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           FilledButton(onPressed: () {
             final value = int.tryParse(controller.text.trim());
-            if (value != null && value >= 1 && value <= 10000) Navigator.pop(context, value);
+            if (value != null && value >= 10 && value <= 10000 && value % 10 === 0) Navigator.pop(context, value);
           }, child: const Text('Continue')),
         ],
       ),
