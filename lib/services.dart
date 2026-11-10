@@ -314,6 +314,23 @@ class SecretClipboard {
 class NodeChannel {
   static const MethodChannel _channel = MethodChannel(AppConfig.channelName);
 
+  static Future<void> log(String message, {String level = "info"}) async {
+    try {
+      await _channel.invokeMethod<bool>("addLog", <String, String>{"level": level, "message": message});
+    } on PlatformException {
+      // Diagnostics must never break app behavior.
+    }
+  }
+
+  static Future<List<String>> logs() async {
+    final entries = await _channel.invokeMethod<List<dynamic>>("getLogs");
+    return (entries ?? const <dynamic>[]).map((entry) => entry.toString()).toList();
+  }
+
+  static Future<void> clearLogs() async {
+    await _channel.invokeMethod<bool>("clearLogs");
+  }
+
   static Future<bool> start() async {
     final ok = await _channel.invokeMethod<bool>('startNode');
     if (ok != true) return false;
