@@ -280,7 +280,7 @@ require.cache[authPath] = {
 
   // Streaming API, moderation and accounting contract checks.
   const streamApiSource = fs.readFileSync(path.join(__dirname, '../api/stream.js'), 'utf8');
-  const streamSqlSource = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261110_gaindeep_streaming.sql'), 'utf8');
+  const streamSqlSource = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261110173606_gaindeep_streaming_foundation.sql'), 'utf8');
   const streamUiSource = fs.readFileSync(path.join(__dirname, '../lib/streaming.dart'), 'utf8');
   test('stream API requires an authenticated session', () => assert.ok(streamApiSource.includes('requireSession(req, res)')));
   test('stream donations use an atomic database RPC', () => assert.ok(streamApiSource.includes("rpc('donate_stream_points'")));
