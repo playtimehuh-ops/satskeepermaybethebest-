@@ -27,10 +27,16 @@ module.exports = wrap(async (req, res) => {
     const { data: existing, error: lookupError } = await supabase.from('stream_creator_applications')
       .select('id, status').eq('user_id', userId).in('status', ['pending', 'approved']).limit(1);
     if (lookupError) return res.status(503).json({ error: 'streams_unavailable' });
-    if (existing && existing.length) return res.status(409).json({ error: 'application_already_exists', status: existing[0].status });
-    const { error } = await supabase.from('stream_creator_applications').insert({
-      user_id: userId, display_name: displayName, reason, status: 'pending',
-    });
+    if (existing && existing.length && existing[0].status !== 'rejected') {
+      return res.status(409).json({ error: 'application_already_exists', status: existing[0].status });
+    }
+    const { error } = existing && existing.length
+      ? await supabase.from('stream_creator_applications').update({
+          display_name: displayName, reason, status: 'pending', reviewed_at: null, adult_verified_at: null,
+        }).eq('id', existing[0].id)
+      : await supabase.from('stream_creator_applications').insert({
+          user_id: userId, display_name: displayName, reason, status: 'pending',
+        });
     if (error) {
       console.error('creator_application_failed', error.code);
       return res.status(503).json({ error: 'streams_unavailable' });
@@ -41,7 +47,7 @@ module.exports = wrap(async (req, res) => {
   if (body.action === 'donate') {
     const streamId = clean(body.stream_id, 64);
     const points = Number(body.points);
-    if (!/^[0-9a-f-]{36}$/i.test(streamId) || !Number.isSafeInteger(points) || points < 1 || points > 10000)
+    if (!/^[0-9a-f-]{36}$/i.test(streamId) || !Number.isSafeInteger(points) || points < 10 || points > 10000 || points % 10 !== 0)
       return res.status(400).json({ error: 'invalid_donation' });
     const { data, error } = await supabase.rpc('donate_stream_points', {
       p_donor_id: userId, p_stream_id: streamId, p_points: points,
@@ -54,6 +60,7 @@ module.exports = wrap(async (req, res) => {
     if (result.status === 'insufficient_points') return res.status(409).json({ error: 'insufficient_points' });
     if (result.status === 'not_live') return res.status(409).json({ error: 'stream_not_live' });
     if (result.status === 'self_donation') return res.status(400).json({ error: 'self_donation_not_allowed' });
+    if (result.status === 'creator_unavailable') return res.status(409).json({ error: 'creator_unavailable' });
     if (result.status !== 'donated') return res.status(400).json({ error: 'invalid_donation' });
     return res.status(200).json(result);
   }
