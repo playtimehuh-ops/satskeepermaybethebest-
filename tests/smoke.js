@@ -278,6 +278,20 @@ require.cache[authPath] = {
     assert.strictEqual(r.body.error, 'insufficient_points');
   });
 
+  // Streaming API, moderation and accounting contract checks.
+  const streamApiSource = fs.readFileSync(path.join(__dirname, '../api/stream.js'), 'utf8');
+  const streamSqlSource = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261110_gaindeep_streaming.sql'), 'utf8');
+  const streamUiSource = fs.readFileSync(path.join(__dirname, '../lib/streaming.dart'), 'utf8');
+  test('stream API requires an authenticated session', () => assert.ok(streamApiSource.includes('requireSession(req, res)')));
+  test('stream donations use an atomic database RPC', () => assert.ok(streamApiSource.includes("rpc('donate_stream_points'")));
+  test('stream donations allocate 70 percent to creator', () => assert.match(streamSqlSource, /floor\(p_points \* 0\.70\)/));
+  test('only approved live streams are listed', () => assert.ok(streamApiSource.includes(".eq('moderation_status', 'approved')")));
+  test('stream UI includes creator applications and reporting', () => {
+    assert.ok(streamUiSource.includes('Apply to become a creator'));
+    assert.ok(streamUiSource.includes('Report stream'));
+  });
+  test('stream UI discloses video provider setup is pending', () => assert.ok(streamUiSource.includes('Video provider setup pending')));
+
   // CryptoRefills validation-only path must never create orders or reserve points.
   const cryptoValidationSource = fs.readFileSync(path.join(__dirname, '../api/cryptorefills-validate.js'), 'utf8');
   const cryptoClientSource = fs.readFileSync(path.join(__dirname, '../api/_lib/cryptorefills.js'), 'utf8');
