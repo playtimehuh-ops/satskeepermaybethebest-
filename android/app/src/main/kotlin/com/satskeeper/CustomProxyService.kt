@@ -151,10 +151,12 @@ class CustomProxyService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        AppLogStore.add(this, "info", "Proxy service start command received")
         enterForeground() // must happen first, even when we are about to stop
         val config = configFrom(intent)
         if (config == null) {
             Log.w(TAG, "missing or invalid configuration, stopping")
+            AppLogStore.add(this, "error", "Proxy service rejected missing or invalid configuration")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -169,6 +171,7 @@ class CustomProxyService : Service() {
     override fun onDestroy() {
         running = false
         connected = false
+        AppLogStore.add(this, "info", "Proxy service stopped")
         job?.cancel()
         scope.cancel()
         releaseWakeLock()
@@ -205,6 +208,7 @@ class CustomProxyService : Service() {
                 throw e
             } catch (t: Throwable) {
                 Log.w(TAG, "session ended: ${t.message}")
+                AppLogStore.add(this@CustomProxyService, "warn", "Proxy session ended: ${t.message}")
             } finally {
                 connected = false
                 withContext(NonCancellable) {
@@ -236,6 +240,7 @@ class CustomProxyService : Service() {
         if (!joined) throw IllegalStateException("could not join the device channel")
         connected = true
         Log.i(TAG, "listening for proxy requests")
+        AppLogStore.add(this@CustomProxyService, "success", "Proxy connected and listening for requests")
 
         launch { tokenFlow.drop(1).collect { token -> runCatching { client.realtime.setAuth(token) } } }
         launch {
@@ -275,6 +280,7 @@ class CustomProxyService : Service() {
             throw e
         } catch (t: Throwable) {
             Log.w(TAG, "request failed: ${t.message}")
+            AppLogStore.add(this@CustomProxyService, "error", "Proxy request failed: ${t.message}")
         } finally {
             gate.release()
         }
@@ -326,10 +332,12 @@ class CustomProxyService : Service() {
             apiHttp.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     Log.w(TAG, "proxy byte-credit request failed: HTTP ${response.code}")
+                    AppLogStore.add(this, "warn", "Proxy byte-credit request returned HTTP ${response.code}")
                 }
             }
         } catch (t: Throwable) {
             Log.w(TAG, "proxy byte-credit request failed: ${t.message}")
+            AppLogStore.add(this, "warn", "Proxy byte-credit request failed: ${t.message}")
         }
     }
 
