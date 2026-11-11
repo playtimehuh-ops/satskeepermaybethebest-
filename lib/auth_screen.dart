@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'services.dart';
 import 'theme.dart';
+import 'legal.dart';
 
 final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
@@ -19,6 +20,9 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _password = TextEditingController();
   final TextEditingController _confirm = TextEditingController();
   bool _showPassword = false;
+  bool _acceptTerms = false;
+  bool _acceptPrivacy = false;
+  bool _acknowledgeNetwork = false;
   bool _busy = false;
   String? _emailError;
   String? _emailConfirmError;
@@ -48,6 +52,9 @@ class _AuthScreenState extends State<AuthScreen> {
       _info = null;
       _confirm.clear();
       _emailConfirm.clear();
+      _acceptTerms = false;
+      _acceptPrivacy = false;
+      _acknowledgeNetwork = false;
     });
   }
 
@@ -64,6 +71,10 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!_emailPattern.hasMatch(email)) emailError = 'Enter a valid email address.';
     if (_mode == 1 && _emailConfirm.text.trim().toLowerCase() != email.toLowerCase()) {
       emailConfirmError = 'Email addresses must match.';
+    }
+    if (_mode == 1 && (!_acceptTerms || !_acceptPrivacy || !_acknowledgeNetwork)) {
+      setState(() => _formError = 'Please review and accept all three items before creating an account.');
+      return;
     }
     if (password.isEmpty) {
       passwordError = 'Enter your password.';
@@ -97,7 +108,13 @@ class _AuthScreenState extends State<AuthScreen> {
       if (_mode == 0) {
         await AuthService.signIn(email, password);
       } else {
-        final signedIn = await AuthService.signUp(email, password);
+        final signedIn = await AuthService.signUp(
+          email,
+          password,
+          termsVersion: '2026-11-11-draft-1',
+          privacyVersion: '2026-11-11-draft-1',
+          networkDisclosureVersion: '2026-11-11-1',
+        );
         if (!signedIn && mounted) {
           setState(() {
             _mode = 0;
@@ -215,7 +232,27 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                     ),
-                    AnimatedSize(
+                    if (signup) ...[
+                      const SizedBox(height: 20),
+                      _ConsentCheck(
+                        value: _acceptTerms,
+                        onChanged: (v) => setState(() => _acceptTerms = v),
+                        text: 'I agree to the Terms of Service (currently marked as a pre-launch draft).',
+                        onOpen: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const TermsScreen())),
+                      ),
+                      _ConsentCheck(
+                        value: _acceptPrivacy,
+                        onChanged: (v) => setState(() => _acceptPrivacy = v),
+                        text: 'I have read the Privacy Policy (currently marked as a pre-launch draft).',
+                        onOpen: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacyScreen())),
+                      ),
+                      _ConsentCheck(
+                        value: _acknowledgeNetwork,
+                        onChanged: (v) => setState(() => _acknowledgeNetwork = v),
+                        text: 'I understand that other people’s network traffic may use my connection and public IP address, and may consume my data.',
+                      ),
+                    ],
+                                        AnimatedSize(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOut,
                       alignment: Alignment.topCenter,
@@ -261,6 +298,58 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+class _ConsentCheck extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final String text;
+  final VoidCallback? onOpen;
+
+  const _ConsentCheck({
+    required this.value,
+    required this.onChanged,
+    required this.text,
+    this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: Checkbox(value: value, onChanged: (v) => onChanged(v ?? false)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(text, style: T.small(c).copyWith(color: c.ink)),
+                if (onOpen != null)
+                  TextButton(
+                    onPressed: onOpen,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Read'),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
