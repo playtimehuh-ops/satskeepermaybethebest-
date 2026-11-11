@@ -5,6 +5,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.view.WindowManager
 import android.util.Log
 import org.json.JSONArray
@@ -125,7 +128,37 @@ class MainActivity : FlutterActivity() {
                                 this,
                                 Intent(this, MysteriumNodeService::class.java)
                             )
-                            result.success(true)
+
+                            // Do not report success merely because Android accepted the
+                            // foreground-service request. Mysterium starts asynchronously.
+                            val handler = Handler(Looper.getMainLooper())
+                            val startedAt = SystemClock.elapsedRealtime()
+                            val checkStartup = object : Runnable {
+                                override fun run() {
+                                    val failure = MysteriumNodeService.errorMessage()
+                                    val elapsed = SystemClock.elapsedRealtime() - startedAt
+
+                                    when {
+                                        MysteriumNodeService.isRunning() -> result.success(true)
+                                        !failure.isNullOrBlank() ->
+                                            result.error("MYSTERIUM_START_FAILED", failure, null)
+                                        elapsed >= 120_000L ->
+                                            result.error(
+                                                "MYSTERIUM_START_TIMEOUT",
+                                                "Mysterium did not become ready within 120 seconds. Open Logs for details.",
+                                                null
+                                            )
+                                        !MysteriumNodeService.isStarting() && elapsed >= 1_500L ->
+                                            result.error(
+                                                "MYSTERIUM_START_FAILED",
+                                                "Mysterium stopped before the provider became ready. Open Logs for details.",
+                                                null
+                                            )
+                                        else -> handler.postDelayed(this, 250L)
+                                    }
+                                }
+                            }
+                            handler.post(checkStartup)
                         } catch (t: Throwable) {
                             result.error("START_FAILED", t.message, null)
                         }
