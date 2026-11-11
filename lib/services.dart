@@ -200,8 +200,24 @@ class AuthService {
 
   /// Returns true when the account is signed in immediately, false when the
   /// project requires email confirmation first.
-  static Future<bool> signUp(String email, String password) async {
-    final j = await _post('/signup', {'email': email, 'password': password});
+  static Future<bool> signUp(
+    String email,
+    String password, {
+    required String termsVersion,
+    required String privacyVersion,
+    required String networkDisclosureVersion,
+  }) async {
+    final acceptedAt = DateTime.now().toUtc().toIso8601String();
+    final j = await _post('/signup', {
+      'email': email,
+      'password': password,
+      'data': {
+        'gaindeep_terms_version': termsVersion,
+        'gaindeep_privacy_version': privacyVersion,
+        'gaindeep_network_disclosure_version': networkDisclosureVersion,
+        'gaindeep_legal_accepted_at': acceptedAt,
+      },
+    });
     if (j['access_token'] != null) {
       await _store(j);
       return true;
