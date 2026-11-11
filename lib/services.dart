@@ -205,18 +205,21 @@ class AuthService {
     String password, {
     required String termsVersion,
     required String privacyVersion,
-    required String networkDisclosureVersion,
+    String? networkDisclosureVersion,
   }) async {
     final acceptedAt = DateTime.now().toUtc().toIso8601String();
+    final metadata = <String, dynamic>{
+      'gaindeep_terms_version': termsVersion,
+      'gaindeep_privacy_version': privacyVersion,
+      'gaindeep_legal_accepted_at': acceptedAt,
+    };
+    if (networkDisclosureVersion != null) {
+      metadata['gaindeep_network_disclosure_version'] = networkDisclosureVersion;
+    }
     final j = await _post('/signup', {
       'email': email,
       'password': password,
-      'data': {
-        'gaindeep_terms_version': termsVersion,
-        'gaindeep_privacy_version': privacyVersion,
-        'gaindeep_network_disclosure_version': networkDisclosureVersion,
-        'gaindeep_legal_accepted_at': acceptedAt,
-      },
+      'data': metadata,
     });
     if (j['access_token'] != null) {
       await _store(j);
