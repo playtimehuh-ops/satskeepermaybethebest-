@@ -252,7 +252,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         text: 'I understand that other people’s network traffic may use my connection and public IP address, and may consume my data.',
                       ),
                     ],
-                                        AnimatedSize(
+                    AnimatedSize(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOut,
                       alignment: Alignment.topCenter,
