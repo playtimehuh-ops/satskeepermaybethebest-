@@ -72,8 +72,8 @@ class _AuthScreenState extends State<AuthScreen> {
     if (_mode == 1 && _emailConfirm.text.trim().toLowerCase() != email.toLowerCase()) {
       emailConfirmError = 'Email addresses must match.';
     }
-    if (_mode == 1 && (!_acceptTerms || !_acceptPrivacy || !_acknowledgeNetwork)) {
-      setState(() => _formError = 'Please review and accept all three items before creating an account.');
+    if (_mode == 1 && (!_acceptTerms || !_acceptPrivacy)) {
+      setState(() => _formError = 'Please accept the Terms of Service and acknowledge the Privacy Policy to create an account.');
       return;
     }
     if (password.isEmpty) {
@@ -113,7 +113,7 @@ class _AuthScreenState extends State<AuthScreen> {
           password,
           termsVersion: '2026-11-11-draft-1',
           privacyVersion: '2026-11-11-draft-1',
-          networkDisclosureVersion: '2026-11-11-1',
+          networkDisclosureVersion: _acknowledgeNetwork ? '2026-11-11-1' : null,
         );
         if (!signedIn && mounted) {
           setState(() {
@@ -249,7 +249,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       _ConsentCheck(
                         value: _acknowledgeNetwork,
                         onChanged: (v) => setState(() => _acknowledgeNetwork = v),
-                        text: 'I understand that other people’s network traffic may use my connection and public IP address, and may consume my data.',
+                        text: 'Optional: I agree to share my connection with other people’s network traffic. This can use my data and public IP address. Sharing stays off unless I enable it later.',
                       ),
                     ],
                     AnimatedSize(
